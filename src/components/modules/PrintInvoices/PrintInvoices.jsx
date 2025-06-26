@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import { toast } from '@/components/ui/use-toast';
@@ -49,16 +50,14 @@ const PrintInvoices = () => {
 
     if (searchTerm.trim()) {
       const searchVal = searchTerm.trim();
-      let orConditions = [];
-
+      
       if (invoiceType === 'venta') {
-        orConditions.push(`clientes.nombre_completo.ilike.%${searchVal}%`);
-        orConditions.push(`numero_factura.ilike.%${searchVal}%`); 
+        // Fixed PostgREST syntax using or() function
+        query = query.or(`clientes.nombre_completo.ilike.%${searchVal}%,numero_factura.ilike.%${searchVal}%`);
       } else { // compra
-        orConditions.push(`proveedores.nombre_proveedor.ilike.%${searchVal}%`);
-        orConditions.push(`numero_factura.ilike.%${searchVal}%`);
+        // Fixed PostgREST syntax using or() function
+        query = query.or(`proveedores.nombre_proveedor.ilike.%${searchVal}%,numero_factura.ilike.%${searchVal}%`);
       }
-      query = query.or(orConditions.join(','));
     }
     
     const { data, error } = await query.limit(50);

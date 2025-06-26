@@ -20,7 +20,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
     proveedor_id: null,
     total_tela: 0,
     notas: '',
-    metodo_pago: '',
+    metodo_pago: null, // Changed from '' to null to prevent empty string error
   });
 
   const [form, setForm] = useState(getInitialFormState());
@@ -37,7 +37,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
             ancho_tela: editingFabricEntry.ancho_tela || '',
             precio_metro: editingFabricEntry.precio_metro || '',
             total_tela: editingFabricEntry.total_tela || 0,
-            metodo_pago: editingFabricEntry.metodo_pago || '',
+            metodo_pago: editingFabricEntry.metodo_pago || null, // Changed from '' to null
           });
         } else {
           setForm(getInitialFormState());
@@ -144,7 +144,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
             </div>
              <div>
               <Label htmlFor="fabric_entry_metodo_pago">Método de Pago</Label>
-              <Select name="metodo_pago" value={form.metodo_pago} onValueChange={(value) => handleSelectChange('metodo_pago', value)} required>
+              <Select name="metodo_pago" value={form.metodo_pago || ""} onValueChange={(value) => handleSelectChange('metodo_pago', value)} required>
                 <SelectTrigger id="fabric_entry_metodo_pago"><SelectValue placeholder="Seleccionar método..." /></SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map(method => (
