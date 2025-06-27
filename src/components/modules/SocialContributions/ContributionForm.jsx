@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution }) => {
+const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution, partners }) => {
   const initialFormState = {
     nombre_socio: '',
     monto_aporte: '',
@@ -43,12 +45,28 @@ const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution 
             <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                 <Label htmlFor="nombre_socio">Nombre del Socio</Label>
-                <Input
-                id="nombre_socio"
-                value={form.nombre_socio}
-                onChange={(e) => setForm({ ...form, nombre_socio: e.target.value })}
-                required
-                />
+                {partners && partners.length > 0 ? (
+                  <Select value={form.nombre_socio} onValueChange={(value) => setForm({ ...form, nombre_socio: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar socio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {partners.map(partner => (
+                        <SelectItem key={partner.id} value={partner.nombre_socio}>
+                          {partner.nombre_socio}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="nombre_socio"
+                    value={form.nombre_socio}
+                    onChange={(e) => setForm({ ...form, nombre_socio: e.target.value })}
+                    placeholder="Ingresa el nombre del socio"
+                    required
+                  />
+                )}
             </div>
             <div>
                 <Label htmlFor="monto_aporte">Monto del Aporte</Label>

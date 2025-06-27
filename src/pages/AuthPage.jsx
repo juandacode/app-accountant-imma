@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
@@ -22,7 +23,12 @@ const AuthPage = () => {
       if (error) {
         throw error;
       }
+      toast({
+        title: 'Bienvenido',
+        description: 'Has iniciado sesión correctamente.',
+      });
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: 'Error de inicio de sesión',
         description: error.message || 'Por favor, verifica tus credenciales e inténtalo de nuevo.',
@@ -42,10 +48,14 @@ const AuthPage = () => {
       >
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center">
-            <div className="mx-auto bg-gradient-to-r from-purple-600 to-blue-600 p-3 rounded-full inline-block">
-                <Building2 className="h-8 w-8 text-white" />
+            <div className="mx-auto bg-gradient-to-r from-purple-600 to-blue-600 p-3 rounded-full inline-block mb-4">
+                <img 
+                  src="/lovable-uploads/507173b0-6c76-4763-9bf5-5c5cdd4362b0.png" 
+                  alt="Beauty Blouse Logo" 
+                  className="h-12 w-12 object-contain"
+                />
             </div>
-            <CardTitle className="text-2xl font-bold mt-4">Bienvenido a ContaFácil</CardTitle>
+            <CardTitle className="text-2xl font-bold mt-4">Bienvenido a Beauty Blouse</CardTitle>
             <CardDescription>Inicia sesión para acceder a tu sistema contable</CardDescription>
           </CardHeader>
           <CardContent>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const InvoiceTemplate = ({ invoice, type }) => {
@@ -22,7 +23,7 @@ const InvoiceTemplate = ({ invoice, type }) => {
     return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const logoUrl = "https://storage.googleapis.com/hostinger-horizons-assets-prod/da71dc8e-bd5b-448d-a116-978f0f0d737f/38dbae038e438e6332e06631a31b6a5e.png"; 
+  const logoUrl = "/lovable-uploads/507173b0-6c76-4763-9bf5-5c5cdd4362b0.png"; 
   const primaryColor = "#E0AFA7"; 
 
   return (
@@ -38,7 +39,7 @@ const InvoiceTemplate = ({ invoice, type }) => {
           margin-bottom: 20px;
         }
         .header-section .logo {
-          max-height: 80px; /* Increased logo size slightly */
+          max-height: 80px;
           width: auto;
         }
         .header-section .invoice-title {
@@ -76,8 +77,8 @@ const InvoiceTemplate = ({ invoice, type }) => {
         }
         .items-table .text-right { text-align: right; }
         .totals-section {
-          margin-top: auto; /* Pushes totals and footer to bottom */
-          padding-top: 20px; /* Space before totals */
+          margin-top: auto;
+          padding-top: 20px;
         }
         .totals-table td { padding: 4px 0; }
         .totals-table .label { font-weight: bold; color: #555; padding-right: 10px; }
@@ -94,7 +95,7 @@ const InvoiceTemplate = ({ invoice, type }) => {
           color: #777;
           border-top: 1px solid #eee;
           padding-top: 15px;
-          margin-top: 20px; /* Space after totals */
+          margin-top: 20px;
         }
       `}</style>
       
