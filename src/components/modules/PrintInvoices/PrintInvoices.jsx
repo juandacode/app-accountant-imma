@@ -26,7 +26,6 @@ const PrintInvoices = () => {
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [loading, setLoading] = useState(false); 
-  const printRef = useRef();
 
   const fetchInvoices = async () => {
     if (!supabase) {
@@ -49,20 +48,21 @@ const PrintInvoices = () => {
     query = query.select(selectFields).order('fecha_emision', { ascending: false });
 
     if (searchTerm.trim()) {
-      const searchVal = searchTerm.trim();
+      const searchVal = `%${searchTerm.trim()}%`;
       
       if (invoiceType === 'venta') {
-        // Fixed PostgREST syntax using or() function
-        query = query.or(`clientes.nombre_completo.ilike.%${searchVal}%,numero_factura.ilike.%${searchVal}%`);
-      } else { // compra
-        // Fixed PostgREST syntax using or() function
-        query = query.or(`proveedores.nombre_proveedor.ilike.%${searchVal}%,numero_factura.ilike.%${searchVal}%`);
+        // Fixed: Using proper filter syntax for related table search
+        query = query.or(`numero_factura.ilike.${searchVal},clientes.nombre_completo.ilike.${searchVal}`);
+      } else {
+        // Fixed: Using proper filter syntax for related table search
+        query = query.or(`numero_factura.ilike.${searchVal},proveedores.nombre_proveedor.ilike.${searchVal}`);
       }
     }
     
     const { data, error } = await query.limit(50);
 
     if (error) {
+      console.error('Error al cargar facturas:', error);
       toast({ title: "Error al Cargar Facturas", description: `No se pudieron cargar las facturas: ${error.message}`, variant: "destructive" });
       setInvoices([]);
     } else {
@@ -90,12 +90,17 @@ const PrintInvoices = () => {
   };
 
   const handlePrint = () => {
-    if (!selectedInvoice || !printRef.current) {
+    if (!selectedInvoice) {
         toast({ title: "Error", description: "Selecciona una factura para imprimir.", variant: "destructive" });
         return;
     }
     
-    const printContent = printRef.current.innerHTML;
+    const printContent = printRef.current?.innerHTML;
+    if (!printContent) {
+        toast({ title: "Error", description: "No se pudo obtener el contenido para imprimir.", variant: "destructive" });
+        return;
+    }
+    
     const printWindow = window.open('', '_blank', 'height=800,width=1000');
     
     if(!printWindow) {
@@ -104,10 +109,8 @@ const PrintInvoices = () => {
     }
 
     printWindow.document.write('<html><head><title>Imprimir Factura</title>');
-    printWindow.document.write('<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">'); // Tailwind for basic layout in print
+    printWindow.document.write('<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">');
     printWindow.document.write('<style>');
-    // Inline styles from InvoiceTemplate will be included via printContent
-    // Add print-specific styles here
     printWindow.document.write(`
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .invoice-box { width: 100%; max-width: 800px; margin: auto; padding: 20px; font-size: 12px; line-height: 1.5; }
@@ -134,15 +137,17 @@ const PrintInvoices = () => {
 
   const formatDateForList = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString + 'T00:00:00Z');
-    if (isNaN(date.getTime())) return 'Fecha Inválida';
-    return date.toLocaleDateString('es-CO');
+    try {
+      const date = new Date(dateString + 'T00:00:00Z');
+      if (isNaN(date.getTime())) return 'Fecha Inválida';
+      return date.toLocaleDateString('es-CO');
+    } catch (error) {
+      return 'Fecha Inválida';
+    }
   }
-
 
   if (supabaseLoading) return <div className="flex justify-center items-center h-screen"><p className="text-xl text-pink-600 animate-pulse">Cargando Módulo de Impresión...</p></div>;
   if (supabaseError) return <div className="flex flex-col justify-center items-center h-screen p-8 text-center"><h2 className="text-2xl font-bold text-red-600 mb-4">Error al Cargar Módulo</h2><p className="text-gray-700 mb-2">{supabaseError.message}</p></div>;
-
 
   return (
     <div className="space-y-6">

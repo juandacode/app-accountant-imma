@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,17 +11,17 @@ import { PackagePlus } from 'lucide-react';
 
 const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, suppliers, paymentMethods }) => {
   const getInitialFormState = () => ({
-    fecha_ingreso: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD for input type date
+    fecha_ingreso: new Date().toLocaleDateString('en-CA'),
     codigo_rollo: '',
     nombre_tela: '',
     color: '',
     metraje_saldo: '', 
     ancho_tela: '',
     precio_metro: '',
-    proveedor_id: null,
+    proveedor_id: '',
     total_tela: 0,
     notas: '',
-    metodo_pago: null, // Changed from '' to null to prevent empty string error
+    metodo_pago: '',
   });
 
   const [form, setForm] = useState(getInitialFormState());
@@ -32,12 +33,12 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
             ...getInitialFormState(), 
             ...editingFabricEntry,
             fecha_ingreso: editingFabricEntry.fecha_ingreso ? new Date(editingFabricEntry.fecha_ingreso + 'T00:00:00Z').toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
-            proveedor_id: editingFabricEntry.proveedor_id ? String(editingFabricEntry.proveedor_id) : null,
+            proveedor_id: editingFabricEntry.proveedor_id ? String(editingFabricEntry.proveedor_id) : '',
             metraje_saldo: editingFabricEntry.metraje_saldo || '',
             ancho_tela: editingFabricEntry.ancho_tela || '',
             precio_metro: editingFabricEntry.precio_metro || '',
             total_tela: editingFabricEntry.total_tela || 0,
-            metodo_pago: editingFabricEntry.metodo_pago || null, // Changed from '' to null
+            metodo_pago: editingFabricEntry.metodo_pago || '',
           });
         } else {
           setForm(getInitialFormState());
@@ -77,7 +78,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
     }
     const dataToSubmit = {
         ...form,
-        fecha_ingreso: form.fecha_ingreso, // Already in YYYY-MM-DD
+        fecha_ingreso: form.fecha_ingreso,
         metraje_saldo: parseFloat(form.metraje_saldo),
         ancho_tela: form.ancho_tela ? parseFloat(form.ancho_tela) : null,
         precio_metro: parseFloat(form.precio_metro),
@@ -91,12 +92,11 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
      return Math.round(value).toLocaleString('es');
   };
 
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
         onOpenChange(open);
         if (!open) {
-            setForm(getInitialFormState()); // Reset form when dialog is explicitly closed
+            setForm(getInitialFormState());
         }
     }}>
       <DialogContent className="sm:max-w-lg">
@@ -144,10 +144,10 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
             </div>
              <div>
               <Label htmlFor="fabric_entry_metodo_pago">Método de Pago</Label>
-              <Select name="metodo_pago" value={form.metodo_pago || ""} onValueChange={(value) => handleSelectChange('metodo_pago', value)} required>
+              <Select name="metodo_pago" value={form.metodo_pago} onValueChange={(value) => handleSelectChange('metodo_pago', value)} required>
                 <SelectTrigger id="fabric_entry_metodo_pago"><SelectValue placeholder="Seleccionar método..." /></SelectTrigger>
                 <SelectContent>
-                  {paymentMethods.map(method => (
+                  {paymentMethods && paymentMethods.map(method => (
                     <SelectItem key={method} value={method}>{method}</SelectItem>
                   ))}
                 </SelectContent>
@@ -157,11 +157,11 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
           
           <div>
             <Label htmlFor="fabric_entry_proveedor_id">Proveedor (Opcional)</Label>
-            <Select name="proveedor_id" value={form.proveedor_id || ''} onValueChange={(value) => handleSelectChange('proveedor_id', value)}>
+            <Select name="proveedor_id" value={form.proveedor_id} onValueChange={(value) => handleSelectChange('proveedor_id', value)}>
               <SelectTrigger id="fabric_entry_proveedor_id"><SelectValue placeholder="Seleccionar proveedor..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Ninguno</SelectItem>
-                {suppliers.map(supplier => (
+                {suppliers && suppliers.map(supplier => (
                   <SelectItem key={supplier.id} value={String(supplier.id)}>{supplier.nombre_proveedor}</SelectItem>
                 ))}
               </SelectContent>
@@ -170,7 +170,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
 
           <div>
             <Label htmlFor="fabric_entry_total_tela">Total Compra Tela</Label>
-            <Input id="fabric_entry_total_tela" name="total_tela" value={`\${formatCurrency(form.total_tela)}`} readOnly className="font-bold bg-gray-100" />
+            <Input id="fabric_entry_total_tela" name="total_tela" value={`$${formatCurrency(form.total_tela)}`} readOnly className="font-bold bg-gray-100" />
           </div>
 
           <div>
