@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Layout from '@/components/Layout';
 import AuthPage from '@/pages/AuthPage';
@@ -29,18 +30,12 @@ const AppContent = () => {
 
   useEffect(() => {
     if (!loading && error) {
+      console.error('Supabase error:', error);
       toast({
-        title: "Error de Configuración/Conexión Supabase",
-        description: `Detalle: ${error.message}. Por favor, revisa la consola para más información.`,
+        title: "Error de Conexión",
+        description: `Problema de configuración: ${error.message}`,
         variant: "destructive",
-        duration: Infinity, 
-      });
-    } else if (!loading && !supabase && !error) {
-      toast({
-        title: "Supabase no disponible",
-        description: "El cliente de Supabase no pudo inicializarse. La funcionalidad de la base de datos estará limitada. Verifica las credenciales y la conexión.",
-        variant: "destructive",
-        duration: Infinity,
+        duration: 5000,
       });
     }
   }, [supabase, loading, error]);
@@ -71,47 +66,25 @@ const AppContent = () => {
   };
 
   if (loading) {
-      return (
-          <div className="flex justify-center items-center h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-100">
-              <p className="text-2xl text-pink-600 animate-pulse font-semibold">Conectando con los servicios...</p>
-          </div>
-      );
-  }
-  
-  if (error && !loading) { // Mostrar error si existe, incluso si supabase no es null (podría haber un error de sesión)
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-red-50 p-8 text-center">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">¡Ups! Error de Conexión</h1>
-        <p className="text-red-600 mb-2">No pudimos conectar con nuestros servicios o hubo un problema al cargar la configuración.</p>
-        <p className="text-gray-600">Por favor, intenta recargar la página. Si el problema persiste, revisa tu conexión a internet y las credenciales de Supabase.</p>
-        <pre className="mt-4 text-xs text-left bg-red-100 p-2 rounded overflow-auto max-w-md">{error.message}</pre>
+      <div className="flex justify-center items-center h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-100">
+        <p className="text-2xl text-pink-600 animate-pulse font-semibold">Conectando...</p>
       </div>
     );
   }
 
-  if (!session && !loading && !error) { // Solo mostrar AuthPage si no hay sesión Y no hay error Y no está cargando
-      return <AuthPage />;
-  }
-  
-  // Si hay sesión y no hay error y no está cargando, renderizar la aplicación.
-  // También cubre el caso donde supabase puede ser null pero hay un error que ya se mostró.
-  if (session && !loading && !error) {
-    return (
-      <div className="min-h-screen">
-        <Layout activeModule={activeModule} setActiveModule={setActiveModule}>
-          <Suspense fallback={<LoadingFallback />}>
-            {renderModule()}
-          </Suspense>
-        </Layout>
-        <Toaster />
-      </div>
-    );
+  if (!session) {
+    return <AuthPage />;
   }
 
-  // Fallback por si alguna condición no se cumple, aunque no debería llegar aquí con la lógica anterior.
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <p className="text-xl text-gray-700">Inicializando aplicación...</p>
+    <div className="min-h-screen">
+      <Layout activeModule={activeModule} setActiveModule={setActiveModule}>
+        <Suspense fallback={<LoadingFallback />}>
+          {renderModule()}
+        </Suspense>
+      </Layout>
+      <Toaster />
     </div>
   );
 }

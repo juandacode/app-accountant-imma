@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -51,10 +52,16 @@ const Layout = ({ children, activeModule, setActiveModule }) => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg">
-                {/* Usar img-replace para el logo */}
-                <img  class="h-8 w-auto" alt="Logo de la empresa" src="https://images.unsplash.com/photo-1585065799297-ce07d1855c01" />
+                <img 
+                  src="/lovable-uploads/507173b0-6c76-4763-9bf5-5c5cdd4362b0.png" 
+                  alt="Beauty Blouse Logo" 
+                  className="h-8 w-8 object-contain"
+                />
               </div>
-              {/* Se elimina el texto "ContaFácil" y "Sistema de Gestión Contable" */}
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">Beauty Blouse</h1>
+                <p className="text-sm text-gray-600">Sistema de Gestión</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
                 <div className="text-right">
