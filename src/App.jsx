@@ -30,12 +30,12 @@ const AppContent = () => {
 
   useEffect(() => {
     if (!loading && error) {
-      console.error('Supabase error:', error);
+      console.error('Error de Supabase:', error);
       toast({
         title: "Error de Conexión",
-        description: `Problema de configuración: ${error.message}`,
+        description: `No se pudo conectar con el servidor: ${error.message}`,
         variant: "destructive",
-        duration: 5000,
+        duration: 8000,
       });
     }
   }, [supabase, loading, error]);
@@ -68,7 +68,10 @@ const AppContent = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-orange-100">
-        <p className="text-2xl text-pink-600 animate-pulse font-semibold">Conectando...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
+          <p className="text-xl text-pink-600 font-semibold">Conectando con Beauty Blouse...</p>
+        </div>
       </div>
     );
   }
