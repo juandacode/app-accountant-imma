@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,16 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, ShoppingCart, Percent } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
-const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers, products, paymentMethods, nextInvoiceNumber }) => {
+const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers, products, nextInvoiceNumber }) => {
+  // Formas de pago restringidas a solo 3 opciones
+  const paymentMethods = ['Crédito', 'Efectivo', 'Transferencia'];
+
   const getInitialFormState = () => ({
     numero_factura: '',
     cliente_id: '',
-    fecha_emision: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD
+    fecha_emision: new Date().toLocaleDateString('en-CA'),
     fecha_vencimiento: '',
     forma_pago: '',
     descripcion_factura: '',
     descuento: 0,
   });
+  
   const [form, setForm] = useState(getInitialFormState());
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
   const [invoiceItems, setInvoiceItems] = useState([]);
@@ -43,7 +48,7 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
           setInvoiceItems([]);
         }
     } else {
-       setForm(getInitialFormState()); // Reset form when closed
+       setForm(getInitialFormState());
     }
   }, [editingInvoice, isOpen, customers, nextInvoiceNumber]);
 
@@ -61,7 +66,11 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
   const handleProductSelectionChange = (productId) => {
     const product = products.find(p => p.id === parseInt(productId));
     if (product) {
-      setCurrentItem(prev => ({ ...prev, producto_id: productId, precio_unitario: product.precio_venta_predeterminado || 0 }));
+      setCurrentItem(prev => ({ 
+        ...prev, 
+        producto_id: productId, 
+        precio_unitario: product.precio_venta_predeterminado || 0 
+      }));
     }
   };
   
@@ -75,7 +84,7 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
         toast({ title: "Error", description: "Producto no encontrado.", variant: "destructive" });
         return;
     }
-    if (parseInt(currentItem.cantidad) > product.cantidad_actual && !editingInvoice) { // Only check stock for new invoices or if item not previously on invoice
+    if (parseInt(currentItem.cantidad) > product.cantidad_actual && !editingInvoice) {
         toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${product.cantidad_actual}`, variant: "destructive" });
         return;
     }
@@ -103,8 +112,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
 
     const dataToSubmit = {
       ...form,
-      fecha_emision: form.fecha_emision, // Already YYYY-MM-DD
-      fecha_vencimiento: form.fecha_vencimiento || null, // Send null if empty
+      fecha_emision: form.fecha_emision,
+      fecha_vencimiento: form.fecha_vencimiento || null,
       monto_total: montoTotal,
       descuento: parseFloat(form.descuento) || 0,
     };
@@ -211,7 +220,6 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                     </div>
                 </div>
 
-
                 {invoiceItems.length > 0 && (
                 <div className="mt-4 space-y-2">
                     <h4 className="font-medium">Productos en Factura:</h4>
@@ -262,4 +270,5 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
     </Dialog>
   );
 };
+
 export default InvoiceForm;

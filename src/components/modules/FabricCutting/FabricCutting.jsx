@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, PackagePlus } from 'lucide-react';
+import { Plus, PackagePlus, Scissors } from 'lucide-react';
 
 // Componentes existentes
 import FabricInventoryList from './FabricInventoryList';
@@ -11,7 +12,7 @@ import FabricEntryForm from './FabricEntryForm';
 import FabricCutForm from './FabricCutForm';
 import FabricCutList from './FabricCutList';
 
-// Nuevos componentes para facturas
+// Componentes para facturas de compra de tela
 import FabricPurchaseInvoiceForm from './FabricPurchaseInvoiceForm';
 import FabricPurchaseInvoiceList from './FabricPurchaseInvoiceList';
 import FabricPurchasePaymentForm from './FabricPurchasePaymentForm';
@@ -26,9 +27,8 @@ const FabricCutting = () => {
   const [isEntryFormOpen, setIsEntryFormOpen] = useState(false);
   const [isCutFormOpen, setIsCutFormOpen] = useState(false);
   const [editingFabricEntry, setEditingFabricEntry] = useState(null);
-  const [editingCut, setEditingCut] = useState(null);
   
-  // Nuevos estados para facturas
+  // Estados para facturas de compra de tela
   const [fabricInvoices, setFabricInvoices] = useState([]);
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
@@ -37,7 +37,7 @@ const FabricCutting = () => {
   
   const [loading, setLoading] = useState(true);
 
-  const paymentMethods = ['Efectivo', 'Transferencia', 'Crédito'];
+  const paymentMethods = ['Crédito', 'Efectivo', 'Transferencia'];
 
   useEffect(() => {
     if (supabase && !supabaseLoading && !supabaseError) {
@@ -60,8 +60,6 @@ const FabricCutting = () => {
       setLoading(false);
     }
   };
-
-  // ... keep existing code (fetchFabricInventory, fetchFabricCuts, fetchSuppliers functions)
 
   const fetchFabricInventory = async () => {
     try {
@@ -92,7 +90,16 @@ const FabricCutting = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setFabricCuts(data || []);
+      
+      // Transformar los datos para incluir información de la tela
+      const transformedData = data.map(cut => ({
+        ...cut,
+        tela_nombre: cut.tela_inventario?.nombre_tela || 'Sin nombre',
+        tela_color: cut.tela_inventario?.color || 'Sin color',
+        tela_codigo_rollo: cut.tela_inventario?.codigo_rollo || 'Sin código'
+      }));
+      
+      setFabricCuts(transformedData || []);
     } catch (error) {
       console.error('Error fetching fabric cuts:', error);
       toast({ title: "Error", description: "No se pudieron cargar los cortes de tela.", variant: "destructive" });
@@ -114,7 +121,6 @@ const FabricCutting = () => {
     }
   };
 
-  // Nuevas funciones para facturas
   const fetchFabricInvoices = async () => {
     try {
       const { data, error } = await supabase
@@ -135,12 +141,14 @@ const FabricCutting = () => {
 
   const handleCreateInvoice = async (invoiceData) => {
     try {
+      console.log('Creating invoice with data:', invoiceData);
+      
       // Crear la factura
       const { data: invoice, error: invoiceError } = await supabase
         .from('facturas_compra_tela')
         .insert({
           numero_factura: invoiceData.numero_factura,
-          proveedor_id: invoiceData.proveedor_id,
+          proveedor_id: parseInt(invoiceData.proveedor_id),
           fecha_emision: invoiceData.fecha_emision,
           fecha_vencimiento: invoiceData.fecha_vencimiento || null,
           forma_pago: invoiceData.forma_pago,
@@ -150,7 +158,12 @@ const FabricCutting = () => {
         .select()
         .single();
 
-      if (invoiceError) throw invoiceError;
+      if (invoiceError) {
+        console.error('Invoice creation error:', invoiceError);
+        throw invoiceError;
+      }
+
+      console.log('Invoice created:', invoice);
 
       // Crear los detalles
       const detallesWithInvoiceId = invoiceData.detalles.map(detalle => ({
@@ -162,11 +175,14 @@ const FabricCutting = () => {
         .from('facturas_compra_tela_detalles')
         .insert(detallesWithInvoiceId);
 
-      if (detallesError) throw detallesError;
+      if (detallesError) {
+        console.error('Details creation error:', detallesError);
+        throw detallesError;
+      }
 
       // Actualizar inventario de telas
       for (const detalle of invoiceData.detalles) {
-        await supabase
+        const { error: inventoryError } = await supabase
           .from('telas_inventario')
           .insert({
             codigo_rollo: detalle.codigo_rollo,
@@ -176,11 +192,16 @@ const FabricCutting = () => {
             ancho_tela: detalle.ancho_tela,
             precio_metro: detalle.precio_metro,
             total_tela: detalle.subtotal,
-            proveedor_id: invoiceData.proveedor_id,
+            proveedor_id: parseInt(invoiceData.proveedor_id),
             metodo_pago: invoiceData.forma_pago,
             notas: detalle.notas,
             fecha_ingreso: invoiceData.fecha_emision
           });
+
+        if (inventoryError) {
+          console.error('Inventory update error:', inventoryError);
+          throw inventoryError;
+        }
       }
 
       toast({ title: "Éxito", description: "Factura de compra de tela creada correctamente." });
@@ -274,22 +295,42 @@ const FabricCutting = () => {
 
   const handleSubmitCut = async (cutData) => {
     try {
-      if (editingCut) {
-        const { error } = await supabase
-          .from('telas_cortes')
-          .update(cutData)
-          .eq('id', editingCut.id);
-        if (error) throw error;
-        toast({ title: "Éxito", description: "Corte actualizado correctamente." });
-      } else {
-        const { error } = await supabase
-          .from('telas_cortes')
-          .insert(cutData);
-        if (error) throw error;
-        toast({ title: "Éxito", description: "Corte registrado correctamente." });
+      // Agregar fecha de corte si no está presente
+      const cutDataWithDate = {
+        ...cutData,
+        fecha_corte: cutData.fecha_corte || new Date().toLocaleDateString('en-CA')
+      };
+
+      const { error } = await supabase
+        .from('telas_cortes')
+        .insert(cutDataWithDate);
+      
+      if (error) throw error;
+
+      // Actualizar el inventario restando la cantidad cortada
+      const { data: fabricData, error: fabricError } = await supabase
+        .from('telas_inventario')
+        .select('metraje_saldo')
+        .eq('id', cutData.tela_inventario_id)
+        .single();
+
+      if (fabricError) throw fabricError;
+
+      const newSaldo = fabricData.metraje_saldo - parseFloat(cutData.metros_cortados);
+      
+      if (newSaldo < 0) {
+        throw new Error('No hay suficiente tela en inventario para este corte');
       }
+
+      const { error: updateError } = await supabase
+        .from('telas_inventario')
+        .update({ metraje_saldo: newSaldo })
+        .eq('id', cutData.tela_inventario_id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Éxito", description: "Corte registrado correctamente." });
       setIsCutFormOpen(false);
-      setEditingCut(null);
       fetchFabricCuts();
       fetchFabricInventory();
     } catch (error) {
@@ -298,13 +339,54 @@ const FabricCutting = () => {
     }
   };
 
-  const handleEditCut = (cut) => {
-    setEditingCut(cut);
-    setIsCutFormOpen(true);
+  const handleDeleteCut = async (cutId) => {
+    try {
+      // Obtener datos del corte antes de eliminarlo
+      const { data: cutData, error: getCutError } = await supabase
+        .from('telas_cortes')
+        .select('tela_inventario_id, metros_cortados')
+        .eq('id', cutId)
+        .single();
+
+      if (getCutError) throw getCutError;
+
+      // Eliminar el corte
+      const { error: deleteError } = await supabase
+        .from('telas_cortes')
+        .delete()
+        .eq('id', cutId);
+
+      if (deleteError) throw deleteError;
+
+      // Devolver la tela al inventario
+      const { data: fabricData, error: fabricError } = await supabase
+        .from('telas_inventario')
+        .select('metraje_saldo')
+        .eq('id', cutData.tela_inventario_id)
+        .single();
+
+      if (fabricError) throw fabricError;
+
+      const newSaldo = fabricData.metraje_saldo + parseFloat(cutData.metros_cortados);
+
+      const { error: updateError } = await supabase
+        .from('telas_inventario')
+        .update({ metraje_saldo: newSaldo })
+        .eq('id', cutData.tela_inventario_id);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Éxito", description: "Corte eliminado correctamente." });
+      fetchFabricCuts();
+      fetchFabricInventory();
+    } catch (error) {
+      console.error('Error deleting cut:', error);
+      toast({ title: "Error", description: `No se pudo eliminar el corte: ${error.message}`, variant: "destructive" });
+    }
   };
 
-  if (supabaseLoading) return <div className="flex justify-center items-center h-screen"><p className="text-xl text-purple-600 animate-pulse">Cargando Corte de Telas...</p></div>;
-  if (supabaseError) return <div className="flex flex-col justify-center items-center h-screen p-8 text-center"><h2 className="text-2xl font-bold text-red-600 mb-4">Error al Cargar Corte de Telas</h2><p className="text-gray-700 mb-2">{supabaseError.message}</p></div>;
+  if (supabaseLoading) return <div className="flex justify-center items-center h-screen"><p className="text-xl text-purple-600 animate-pulse">Cargando Gestión de Telas...</p></div>;
+  if (supabaseError) return <div className="flex flex-col justify-center items-center h-screen p-8 text-center"><h2 className="text-2xl font-bold text-red-600 mb-4">Error al Cargar Gestión de Telas</h2><p className="text-gray-700 mb-2">{supabaseError.message}</p></div>;
 
   return (
     <div className="space-y-6">
@@ -317,7 +399,7 @@ const FabricCutting = () => {
 
       <Tabs defaultValue="invoices" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="invoices">Comprar Tela (Facturas)</TabsTrigger>
+          <TabsTrigger value="invoices">Facturas de Compra</TabsTrigger>
           <TabsTrigger value="inventory">Inventario</TabsTrigger>
           <TabsTrigger value="cuts">Cortes</TabsTrigger>
           <TabsTrigger value="entry">Entradas Directas</TabsTrigger>
@@ -338,7 +420,6 @@ const FabricCutting = () => {
               setIsInvoiceFormOpen(true);
             }}
             onViewDetails={(invoice) => {
-              // Implementar vista de detalles si es necesario
               console.log('View details:', invoice);
             }}
             onPayInvoice={(invoice) => {
@@ -360,13 +441,13 @@ const FabricCutting = () => {
         <TabsContent value="cuts" className="space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setIsCutFormOpen(true)} className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="mr-2 h-4 w-4" />
+              <Scissors className="mr-2 h-4 w-4" />
               Registrar Corte
             </Button>
           </div>
           <FabricCutList
             fabricCuts={fabricCuts}
-            onEdit={handleEditCut}
+            onDelete={handleDeleteCut}
             loading={loading}
           />
         </TabsContent>
@@ -422,10 +503,8 @@ const FabricCutting = () => {
         isOpen={isCutFormOpen}
         onOpenChange={(open) => {
           setIsCutFormOpen(open);
-          if (!open) setEditingCut(null);
         }}
         onSubmit={handleSubmitCut}
-        editingCut={editingCut}
         fabricInventory={fabricInventory}
       />
     </div>
