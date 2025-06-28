@@ -83,14 +83,16 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
         toast({ title: "Error", description: "Producto no encontrado.", variant: "destructive" });
         return;
     }
-    if (parseInt(currentItem.cantidad) > product.cantidad_actual && !editingInvoice) {
-        toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${product.cantidad_actual}`, variant: "destructive" });
-        return;
+
+    // CORREGIR: Asegurar que el producto tenga cantidad_actual válida o asignar 0 por defecto
+    const cantidadActual = product.cantidad_actual ?? 0;
+    
+    if (cantidadActual === null || cantidadActual === undefined) {
+        toast({ title: "Advertencia", description: `El producto ${product.nombre} no tiene cantidad en stock definida. Se asumirá stock de 0.`, variant: "destructive" });
     }
 
-    // CORREGIR: Asegurar que el producto tenga cantidad_actual válida
-    if (product.cantidad_actual === null || product.cantidad_actual === undefined) {
-        toast({ title: "Error", description: `El producto ${product.nombre} no tiene cantidad en stock definida. Actualice el inventario primero.`, variant: "destructive" });
+    if (parseInt(currentItem.cantidad) > cantidadActual && !editingInvoice) {
+        toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${cantidadActual}`, variant: "destructive" });
         return;
     }
 
