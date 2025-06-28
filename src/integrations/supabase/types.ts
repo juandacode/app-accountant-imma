@@ -188,6 +188,103 @@ export type Database = {
           },
         ]
       }
+      facturas_compra_tela: {
+        Row: {
+          created_at: string | null
+          descripcion_factura: string | null
+          estado: string
+          fecha_emision: string
+          fecha_vencimiento: string | null
+          forma_pago: string
+          id: number
+          monto_pagado: number | null
+          monto_total: number
+          numero_factura: string
+          proveedor_id: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion_factura?: string | null
+          estado?: string
+          fecha_emision?: string
+          fecha_vencimiento?: string | null
+          forma_pago: string
+          id?: number
+          monto_pagado?: number | null
+          monto_total?: number
+          numero_factura: string
+          proveedor_id?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion_factura?: string | null
+          estado?: string
+          fecha_emision?: string
+          fecha_vencimiento?: string | null
+          forma_pago?: string
+          id?: number
+          monto_pagado?: number | null
+          monto_total?: number
+          numero_factura?: string
+          proveedor_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_compra_tela_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facturas_compra_tela_detalles: {
+        Row: {
+          ancho_tela: number | null
+          codigo_rollo: string
+          color: string
+          factura_compra_tela_id: number
+          id: number
+          metraje_cantidad: number
+          nombre_tela: string
+          notas: string | null
+          precio_metro: number
+          subtotal: number
+        }
+        Insert: {
+          ancho_tela?: number | null
+          codigo_rollo: string
+          color: string
+          factura_compra_tela_id: number
+          id?: number
+          metraje_cantidad: number
+          nombre_tela: string
+          notas?: string | null
+          precio_metro: number
+          subtotal: number
+        }
+        Update: {
+          ancho_tela?: number | null
+          codigo_rollo?: string
+          color?: string
+          factura_compra_tela_id?: number
+          id?: number
+          metraje_cantidad?: number
+          nombre_tela?: string
+          notas?: string | null
+          precio_metro?: number
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_compra_tela_detalles_factura_compra_tela_id_fkey"
+            columns: ["factura_compra_tela_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_compra_tela"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facturas_venta: {
         Row: {
           cliente_id: number | null
@@ -347,6 +444,41 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos_facturas_compra_tela: {
+        Row: {
+          created_at: string | null
+          descripcion_pago: string | null
+          factura_compra_tela_id: number
+          fecha_pago: string
+          id: number
+          monto_pago: number
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion_pago?: string | null
+          factura_compra_tela_id: number
+          fecha_pago?: string
+          id?: number
+          monto_pago: number
+        }
+        Update: {
+          created_at?: string | null
+          descripcion_pago?: string | null
+          factura_compra_tela_id?: number
+          fecha_pago?: string
+          id?: number
+          monto_pago?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_facturas_compra_tela_factura_compra_tela_id_fkey"
+            columns: ["factura_compra_tela_id"]
+            isOneToOne: false
+            referencedRelation: "facturas_compra_tela"
             referencedColumns: ["id"]
           },
         ]
@@ -585,6 +717,10 @@ export type Database = {
       get_monthly_income_statement: {
         Args: { p_year: number; p_month: number }
         Returns: Json
+      }
+      get_next_fabric_purchase_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_next_invoice_number: {
         Args: { prefix: string }

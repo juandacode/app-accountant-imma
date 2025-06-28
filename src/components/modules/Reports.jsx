@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import { toast } from '@/components/ui/use-toast';
@@ -18,6 +19,7 @@ const Reports = ({ setActiveModule }) => {
     totalCogs: 0,
     netProfit: 0,
     pendingReceivables: 0,
+    totalPayables: 0,
     monthlyIncome: 0,
     monthlyCogs: 0,
     monthlyExpenses: 0,
@@ -36,9 +38,6 @@ const Reports = ({ setActiveModule }) => {
     try {
       const { data: summary, error } = await supabase.rpc('get_financial_summary');
       if (error) throw error;
-      
-      const { data: cashBalanceData, error: cashBalanceError } = await supabase.rpc('obtener_saldo_caja_actual');
-      if (cashBalanceError) throw cashBalanceError;
 
       setFinancialSummary({
         totalIncome: summary.total_income || 0,
@@ -46,6 +45,7 @@ const Reports = ({ setActiveModule }) => {
         totalExpenses: summary.total_expenses || 0,
         netProfit: summary.net_profit || 0,
         pendingReceivables: summary.pending_receivables || 0,
+        totalPayables: summary.total_payables || 0,
         monthlyIncome: summary.monthly_income || 0,
         monthlyCogs: summary.monthly_cogs || 0,
         monthlyExpenses: summary.monthly_expenses || 0,
@@ -54,7 +54,7 @@ const Reports = ({ setActiveModule }) => {
         recentTransactions: summary.recent_transactions || [],
         totalSalesInvoices: summary.total_sales_invoices || 0,
         totalExpensesRecords: summary.total_expenses_records || 0,
-        cashBalance: cashBalanceData || 0,
+        cashBalance: summary.cash_balance || 0,
       });
 
     } catch (error) {
