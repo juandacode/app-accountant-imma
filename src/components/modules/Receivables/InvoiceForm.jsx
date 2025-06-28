@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +85,12 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
     }
     if (parseInt(currentItem.cantidad) > product.cantidad_actual && !editingInvoice) {
         toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${product.cantidad_actual}`, variant: "destructive" });
+        return;
+    }
+
+    // CORREGIR: Asegurar que el producto tenga cantidad_actual válida
+    if (product.cantidad_actual === null || product.cantidad_actual === undefined) {
+        toast({ title: "Error", description: `El producto ${product.nombre} no tiene cantidad en stock definida. Actualice el inventario primero.`, variant: "destructive" });
         return;
     }
 

@@ -180,7 +180,7 @@ const FabricCutting = () => {
         throw detallesError;
       }
 
-      // Actualizar inventario de telas
+      // Actualizar inventario de telas - CORREGIR: agregar total_tela que no puede ser NULL
       for (const detalle of invoiceData.detalles) {
         const { error: inventoryError } = await supabase
           .from('telas_inventario')
@@ -189,12 +189,12 @@ const FabricCutting = () => {
             nombre_tela: detalle.nombre_tela,
             color: detalle.color,
             metraje_saldo: detalle.metraje_cantidad,
-            ancho_tela: detalle.ancho_tela,
+            ancho_tela: detalle.ancho_tela || null,
             precio_metro: detalle.precio_metro,
-            total_tela: detalle.subtotal,
+            total_tela: detalle.subtotal, // AGREGAR ESTE CAMPO QUE FALTABA
             proveedor_id: parseInt(invoiceData.proveedor_id),
             metodo_pago: invoiceData.forma_pago,
-            notas: detalle.notas,
+            notas: detalle.notas || null,
             fecha_ingreso: invoiceData.fecha_emision
           });
 

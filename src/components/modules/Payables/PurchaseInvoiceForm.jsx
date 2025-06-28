@@ -105,19 +105,21 @@ const PurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, s
       return;
     }
     const subtotalItems = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+    // CORREGIR: Aplicar descuento correctamente
     const montoTotal = subtotalItems - (parseFloat(form.descuento) || 0);
 
     const dataToSubmit = {
       ...form,
       fecha_emision: form.fecha_emision,
       fecha_vencimiento: form.fecha_vencimiento || null,
-      monto_total: montoTotal,
+      monto_total: montoTotal, // CORREGIR: Usar el monto con descuento aplicado
       descuento: parseFloat(form.descuento) || 0,
     };
     onSubmit(dataToSubmit, invoiceItems);
   };
 
   const subtotalGeneral = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+  // CORREGIR: Aplicar descuento al total final
   const totalFactura = subtotalGeneral - (parseFloat(form.descuento) || 0);
 
   return (
@@ -246,9 +248,12 @@ const PurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, s
                         className="w-32"
                         placeholder="0"
                     />
-                    <Percent className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-500">$</span>
                 </div>
                 <div className="text-right font-semibold">Subtotal General: ${Math.round(subtotalGeneral)}</div>
+                {form.descuento > 0 && (
+                    <div className="text-right text-green-600">Descuento: -${Math.round(form.descuento)}</div>
+                )}
             </div>
 
             <button type="submit" style={{ display: 'none' }}>Submit</button>
