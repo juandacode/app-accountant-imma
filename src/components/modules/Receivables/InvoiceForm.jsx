@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,15 +85,11 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
         return;
     }
 
-    // CORREGIR: Asegurar que el producto tenga cantidad_actual válida o asignar 0 por defecto
-    const cantidadActual = product.cantidad_actual ?? 0;
+    // CORREGIR: Asegurar cantidad_actual como número válido
+    const cantidadDisponible = Number(product.cantidad_actual) || 0;
     
-    if (cantidadActual === null || cantidadActual === undefined) {
-        toast({ title: "Advertencia", description: `El producto ${product.nombre} no tiene cantidad en stock definida. Se asumirá stock de 0.`, variant: "destructive" });
-    }
-
-    if (parseInt(currentItem.cantidad) > cantidadActual && !editingInvoice) {
-        toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${cantidadActual}`, variant: "destructive" });
+    if (parseInt(currentItem.cantidad) > cantidadDisponible && !editingInvoice) {
+        toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${cantidadDisponible}`, variant: "destructive" });
         return;
     }
 
@@ -115,19 +112,21 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
       return;
     }
     const subtotalItems = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+    // CORREGIR: Aplicar descuento correctamente
     const montoTotal = subtotalItems - (parseFloat(form.descuento) || 0);
 
     const dataToSubmit = {
       ...form,
       fecha_emision: form.fecha_emision,
       fecha_vencimiento: form.fecha_vencimiento || null,
-      monto_total: montoTotal,
+      monto_total: montoTotal, // CORREGIR: Usar el monto con descuento aplicado
       descuento: parseFloat(form.descuento) || 0,
     };
     onSubmit(dataToSubmit, invoiceItems);
   };
 
   const subtotalGeneral = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+  // CORREGIR: Aplicar descuento al total final
   const totalFactura = subtotalGeneral - (parseFloat(form.descuento) || 0);
 
   return (
@@ -201,7 +200,7 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                     <SelectTrigger id="receivables_item_producto_id"><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
                     <SelectContent>
                         {products.map(product => (
-                        <SelectItem key={product.id} value={String(product.id)}>{product.nombre} ({product.sku}) - Stock: {product.cantidad_actual}</SelectItem>
+                        <SelectItem key={product.id} value={String(product.id)}>{product.nombre} ({product.sku}) - Stock: {Number(product.cantidad_actual) || 0}</SelectItem>
                         ))}
                     </SelectContent>
                     </Select>
@@ -256,9 +255,12 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                         className="w-32"
                         placeholder="0"
                     />
-                    <Percent className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-500">$</span>
                 </div>
                 <div className="text-right font-semibold">Subtotal General: ${Math.round(subtotalGeneral)}</div>
+                {form.descuento > 0 && (
+                    <div className="text-right text-green-600">Descuento: -${Math.round(form.descuento)}</div>
+                )}
             </div>
 
             <button type="submit" style={{ display: 'none' }}>Submit</button>
