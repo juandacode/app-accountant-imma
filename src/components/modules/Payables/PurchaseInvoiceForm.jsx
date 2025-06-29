@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,8 +110,8 @@ const PurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, s
 
     const dataToSubmit = {
       ...form,
-      fecha_emision: form.fecha_emision,
-      fecha_vencimiento: form.fecha_vencimiento || null,
+      fecha_emision: form.fecha_emision || null, // CORREGIR: Enviar NULL si está vacío
+      fecha_vencimiento: form.fecha_vencimiento || null, // CORREGIR: Enviar NULL si está vacío
       monto_total: montoTotal, // CORREGIR: Usar el monto con descuento aplicado
       descuento: parseFloat(form.descuento) || 0,
     };

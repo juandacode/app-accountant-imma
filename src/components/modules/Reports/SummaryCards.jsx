@@ -2,12 +2,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, BarChart3, Banknote, CreditCard } from 'lucide-react';
+import { TrendingUp, BarChart3, Banknote, CreditCard } from 'lucide-react';
 
 const SummaryCards = ({ summary, onCashBalanceClick }) => {
   const cardsData = [
     { title: "Ingresos Totales", value: summary.totalIncome, icon: TrendingUp, color: "from-green-500 to-emerald-600", note: "Facturas pagadas" },
-    { title: "Gastos Totales", value: summary.totalExpenses, icon: TrendingDown, color: "from-red-500 to-pink-600", note: "Gastos registrados" },
     { title: "Por Cobrar", value: summary.pendingReceivables, icon: BarChart3, color: "from-yellow-500 to-orange-600", note: "Facturas pendientes" },
     { title: "Cuentas por Pagar", value: summary.totalPayables, icon: CreditCard, color: "from-purple-500 to-violet-600", note: "Facturas por pagar" },
     { title: "Saldo en Caja/Banco", value: summary.cashBalance, icon: Banknote, color: "from-teal-500 to-cyan-600", note: "Efectivo disponible", clickable: true },
@@ -21,7 +20,7 @@ const SummaryCards = ({ summary, onCashBalanceClick }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {cardsData.map((card, index) => (
         <motion.div 
           key={index} 

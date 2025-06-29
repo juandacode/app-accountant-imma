@@ -40,11 +40,24 @@ const FabricPurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvo
 
   useEffect(() => {
     if (isOpen && !editingInvoice) {
-      // Generar número de factura automáticamente
-      setForm(prev => ({
-        ...prev,
-        numero_factura: `FCT-${Date.now().toString().slice(-6)}`
-      }));
+      // Generar número de factura automáticamente con formato TELA-01
+      const generateNextNumber = async () => {
+        try {
+          const timestamp = Date.now().toString().slice(-6);
+          const paddedNumber = timestamp.padStart(2, '0');
+          setForm(prev => ({
+            ...prev,
+            numero_factura: `TELA-${paddedNumber}`
+          }));
+        } catch (error) {
+          console.error('Error generando número de factura:', error);
+          setForm(prev => ({
+            ...prev,
+            numero_factura: `TELA-${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`
+          }));
+        }
+      };
+      generateNextNumber();
     }
   }, [isOpen, editingInvoice]);
 
@@ -104,6 +117,8 @@ const FabricPurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvo
 
     const dataToSubmit = {
       ...form,
+      fecha_emision: form.fecha_emision || null, // CORREGIR: Enviar NULL si está vacío
+      fecha_vencimiento: form.fecha_vencimiento || null, // CORREGIR: Enviar NULL si está vacío
       monto_total: montoTotal,
       detalles: invoiceItems
     };
@@ -135,7 +150,7 @@ const FabricPurchaseInvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvo
                     name="numero_factura"
                     value={form.numero_factura}
                     onChange={handleChange}
-                    required
+                    readOnly
                   />
                 </div>
                 <div>

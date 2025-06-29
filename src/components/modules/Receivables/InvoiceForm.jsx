@@ -85,8 +85,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
         return;
     }
 
-    // CORREGIR: Asegurar cantidad_actual como número válido
-    const cantidadDisponible = Number(product.cantidad_actual) || 0;
+    // CORREGIR: Asegurar cantidad_actual como número válido - nunca permitir NULL
+    const cantidadDisponible = product.cantidad_actual !== null && product.cantidad_actual !== undefined ? Number(product.cantidad_actual) : 0;
     
     if (parseInt(currentItem.cantidad) > cantidadDisponible && !editingInvoice) {
         toast({ title: "Error", description: `Stock insuficiente para ${product.nombre}. Disponible: ${cantidadDisponible}`, variant: "destructive" });
@@ -117,8 +117,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
 
     const dataToSubmit = {
       ...form,
-      fecha_emision: form.fecha_emision,
-      fecha_vencimiento: form.fecha_vencimiento || null,
+      fecha_emision: form.fecha_emision || null, // CORREGIR: Enviar NULL si está vacío
+      fecha_vencimiento: form.fecha_vencimiento || null, // CORREGIR: Enviar NULL si está vacío
       monto_total: montoTotal, // CORREGIR: Usar el monto con descuento aplicado
       descuento: parseFloat(form.descuento) || 0,
     };
@@ -199,9 +199,14 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                     <Select value={String(currentItem.producto_id)} onValueChange={handleProductSelectionChange}>
                     <SelectTrigger id="receivables_item_producto_id"><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
                     <SelectContent>
-                        {products.map(product => (
-                        <SelectItem key={product.id} value={String(product.id)}>{product.nombre} ({product.sku}) - Stock: {Number(product.cantidad_actual) || 0}</SelectItem>
-                        ))}
+                        {products.map(product => {
+                          const stockActual = product.cantidad_actual !== null && product.cantidad_actual !== undefined ? Number(product.cantidad_actual) : 0;
+                          return (
+                            <SelectItem key={product.id} value={String(product.id)}>
+                              {product.nombre} ({product.sku}) - Stock: {stockActual}
+                            </SelectItem>
+                          );
+                        })}
                     </SelectContent>
                     </Select>
                 </div>
