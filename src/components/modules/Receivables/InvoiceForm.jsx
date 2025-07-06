@@ -9,7 +9,7 @@ import { Plus, Trash2, ShoppingCart, Percent } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers, products, nextInvoiceNumber }) => {
-  // Formas de pago restringidas a solo 3 opciones
+  // CORREGIR: Solo 3 formas de pago permitidas
   const paymentMethods = ['Crédito', 'Efectivo', 'Transferencia'];
 
   const getInitialFormState = () => ({
@@ -18,8 +18,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
     fecha_emision: new Date().toLocaleDateString('en-CA'),
     fecha_vencimiento: '',
     forma_pago: '',
-    descripcion_factura: '',
-    descuento: 0,
+    descripcion_factura: ''
+    // REMOVER: descuento eliminado según solicitud
   });
   
   const [form, setForm] = useState(getInitialFormState());
@@ -36,8 +36,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
             fecha_emision: editingInvoice.fecha_emision ? new Date(editingInvoice.fecha_emision + 'T00:00:00Z').toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
             fecha_vencimiento: editingInvoice.fecha_vencimiento ? new Date(editingInvoice.fecha_vencimiento + 'T00:00:00Z').toLocaleDateString('en-CA') : '',
             forma_pago: editingInvoice.forma_pago || '',
-            descripcion_factura: editingInvoice.descripcion_factura || '',
-            descuento: editingInvoice.descuento || 0,
+            descripcion_factura: editingInvoice.descripcion_factura || ''
+            // REMOVER: descuento eliminado según solicitud
           });
           const customer = customers.find(c => c.id === editingInvoice.cliente_id);
           setSelectedCustomerDetails(customer);
@@ -111,23 +111,19 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
       toast({ title: "Error de Validación", description: "La fecha de emisión es obligatoria.", variant: "destructive" });
       return;
     }
-    const subtotalItems = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
-    // CORREGIR: Aplicar descuento correctamente
-    const montoTotal = subtotalItems - (parseFloat(form.descuento) || 0);
+    const montoTotal = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
 
     const dataToSubmit = {
       ...form,
       fecha_emision: form.fecha_emision || null, // CORREGIR: Enviar NULL si está vacío
       fecha_vencimiento: form.fecha_vencimiento || null, // CORREGIR: Enviar NULL si está vacío
-      monto_total: montoTotal, // CORREGIR: Usar el monto con descuento aplicado
-      descuento: parseFloat(form.descuento) || 0,
+      monto_total: montoTotal
+      // REMOVER: descuento eliminado según solicitud
     };
     onSubmit(dataToSubmit, invoiceItems);
   };
 
-  const subtotalGeneral = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
-  // CORREGIR: Aplicar descuento al total final
-  const totalFactura = subtotalGeneral - (parseFloat(form.descuento) || 0);
+  const totalFactura = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -247,26 +243,7 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                 )}
             </div>
 
-            <div className="border-t pt-4 mt-4 space-y-2">
-                <div className="flex justify-end items-center gap-2">
-                    <Label htmlFor="receivables_descuento" className="text-right">Descuento Total:</Label>
-                    <Input 
-                        id="receivables_descuento" 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        value={form.descuento} 
-                        onChange={(e) => setForm({...form, descuento: parseFloat(e.target.value) || 0})} 
-                        className="w-32"
-                        placeholder="0"
-                    />
-                    <span className="text-sm text-gray-500">$</span>
-                </div>
-                <div className="text-right font-semibold">Subtotal General: ${Math.round(subtotalGeneral)}</div>
-                {form.descuento > 0 && (
-                    <div className="text-right text-green-600">Descuento: -${Math.round(form.descuento)}</div>
-                )}
-            </div>
+            {/* REMOVER: Sección de descuento eliminada según solicitud */}
 
             <button type="submit" style={{ display: 'none' }}>Submit</button>
             </form>

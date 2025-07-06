@@ -104,8 +104,8 @@ const PrintInvoices = () => {
 
     setLoading(true);
     try {
-      // Corregir la sintaxis de búsqueda usando or() explícitamente
-      const { data, error } = await supabase
+      // CORREGIR: Búsqueda por facturas directamente
+      const { data: invoiceData, error: invoiceError } = await supabase
         .from('facturas_venta')
         .select(`
           *,
@@ -118,9 +118,9 @@ const PrintInvoices = () => {
         .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (invoiceError) throw invoiceError;
 
-      // También buscar por nombre de cliente
+      // CORREGIR: Búsqueda por nombre de cliente usando JOIN correcto
       const { data: clientData, error: clientError } = await supabase
         .from('facturas_venta')
         .select(`
@@ -131,13 +131,13 @@ const PrintInvoices = () => {
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .ilike('cliente.nombre_completo', `%${searchTerm}%`)
+        .filter('cliente.nombre_completo', 'ilike', `%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (clientError) throw clientError;
 
       // Combinar resultados y eliminar duplicados
-      const allResults = [...(data || []), ...(clientData || [])];
+      const allResults = [...(invoiceData || []), ...(clientData || [])];
       const uniqueResults = allResults.filter((invoice, index, self) => 
         index === self.findIndex(i => i.id === invoice.id)
       );

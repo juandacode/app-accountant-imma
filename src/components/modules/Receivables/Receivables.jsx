@@ -30,7 +30,8 @@ const Receivables = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('');
 
-  const paymentMethods = ['Efectivo', 'Transferencia', 'Tarjeta de Crédito', 'Tarjeta de Débito', 'Cheque', 'Contado'];
+  // CORREGIR: Solo 3 formas de pago permitidas
+  const paymentMethods = ['Crédito', 'Efectivo', 'Transferencia'];
 
   const fetchData = async () => {
     if (!supabase) return;
@@ -96,9 +97,9 @@ const Receivables = () => {
 
         await supabase.from('facturas_venta_detalles').delete().eq('factura_venta_id', editingInvoice.id);
       } else {
-        // For new invoices, set estado based on forma_pago
-        const estadoFactura = invoiceData.forma_pago === 'Contado' ? 'Pagada' : 'Pendiente';
-        const montosPagados = invoiceData.forma_pago === 'Contado' ? invoiceData.monto_total : 0;
+        // CORREGIR: Set estado based on forma_pago (Crédito = Pendiente, Efectivo/Transferencia = Pagada)
+        const estadoFactura = invoiceData.forma_pago === 'Crédito' ? 'Pendiente' : 'Pagada';
+        const montosPagados = invoiceData.forma_pago === 'Crédito' ? 0 : invoiceData.monto_total;
         
         const { data, error } = await supabase.from('facturas_venta').insert({
           ...invoiceData,
@@ -108,18 +109,21 @@ const Receivables = () => {
         if (error) throw error;
         result = data;
 
-        if (invoiceData.forma_pago === 'Contado') {
+        // CORREGIR: Registrar pago y transacción de caja para Efectivo y Transferencia
+        if (invoiceData.forma_pago !== 'Crédito') {
           const { error: paymentError } = await supabase.from('pagos_recibidos').insert({
             factura_venta_id: result.id,
             monto_pago: invoiceData.monto_total,
             fecha_pago: invoiceData.fecha_emision,
-            descripcion_pago: 'Pago al contado'
+            descripcion_pago: `Pago con ${invoiceData.forma_pago}`
           });
           if (paymentError) throw paymentError;
 
+          // CORREGIR: Registrar en caja según forma de pago
+          const tipoTransaccion = invoiceData.forma_pago === 'Efectivo' ? 'INGRESO_VENTA_EFECTIVO' : 'INGRESO_VENTA_TRANSFERENCIA';
           const { error: cashError } = await supabase.rpc('registrar_transaccion_caja', {
-            p_tipo_transaccion: 'INGRESO_VENTA_CONTADO',
-            p_descripcion: `Venta al contado factura ${result.numero_factura}`,
+            p_tipo_transaccion: tipoTransaccion,
+            p_descripcion: `Venta ${invoiceData.forma_pago} factura ${result.numero_factura}`,
             p_monto: invoiceData.monto_total,
             p_referencia_id: result.id,
             p_referencia_tabla: 'facturas_venta'
@@ -139,17 +143,40 @@ const Receivables = () => {
       const { error: detailsError } = await supabase.from('facturas_venta_detalles').insert(invoiceDetailsData);
       if (detailsError) throw detailsError;
 
+      // CORREGIR: Actualizar inventario solo para facturas nuevas
       if (!editingInvoice) {
         for (const item of invoiceItems) {
-          const { error: inventoryError } = await supabase.from('productos').update({
-            cantidad_actual: supabase.rpc('cantidad_actual') - parseInt(item.cantidad)
-          }).eq('id', parseInt(item.producto_id));
+          // CORREGIR: Obtener cantidad actual antes de actualizarla
+          const { data: productData, error: getProductError } = await supabase
+            .from('productos')
+            .select('cantidad_actual')
+            .eq('id', parseInt(item.producto_id))
+            .single();
+          
+          if (getProductError) throw getProductError;
+          
+          // CORREGIR: Asegurar cantidad_actual como número válido
+          const currentStock = productData.cantidad_actual || 0;
+          const newStock = currentStock - parseInt(item.cantidad);
+          
+          // CORREGIR: Validar stock suficiente
+          if (newStock < 0) {
+            throw new Error(`Stock insuficiente para el producto. Disponible: ${currentStock}, Solicitado: ${item.cantidad}`);
+          }
+
+          const { error: inventoryError } = await supabase
+            .from('productos')
+            .update({ cantidad_actual: newStock })
+            .eq('id', parseInt(item.producto_id));
+          
           if (inventoryError) throw inventoryError;
 
           const { error: movementError } = await supabase.from('movimientos_inventario').insert({
             producto_id: parseInt(item.producto_id),
             tipo_movimiento: 'SALIDA',
             cantidad: parseInt(item.cantidad),
+            cantidad_anterior: currentStock,
+            cantidad_nueva: newStock,
             descripcion_movimiento: `Venta - Factura ${result.numero_factura}`
           });
           if (movementError) throw movementError;
