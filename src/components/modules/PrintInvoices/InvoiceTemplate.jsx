@@ -3,11 +3,30 @@ import React from 'react';
 
 const InvoiceTemplate = ({ invoice, type }) => {
   const isSale = type === 'venta';
-  const entity = isSale ? invoice.clientes : invoice.proveedores;
-  const entityNameField = isSale ? 'nombre_completo' : 'nombre_proveedor';
-  const entityIdField = isSale ? 'cedula_id' : 'cedula_fiscal';
-  const items = isSale ? invoice.facturas_venta_detalles : invoice.facturas_compra_detalles;
-  const unitPriceField = isSale ? 'precio_unitario' : 'costo_unitario';
+  const isPurchase = type === 'compra';
+  const isFabricPurchase = type === 'compra_tela';
+  
+  let entity, entityNameField, entityIdField, items, unitPriceField;
+  
+  if (isSale) {
+    entity = invoice.cliente;
+    entityNameField = 'nombre_completo';
+    entityIdField = 'cedula_id';
+    items = invoice.detalles;
+    unitPriceField = 'precio_unitario';
+  } else if (isPurchase) {
+    entity = invoice.proveedor;
+    entityNameField = 'nombre_proveedor';
+    entityIdField = 'cedula_fiscal';
+    items = invoice.detalles;
+    unitPriceField = 'costo_unitario';
+  } else if (isFabricPurchase) {
+    entity = invoice.proveedor;
+    entityNameField = 'nombre_proveedor';
+    entityIdField = 'cedula_fiscal';
+    items = invoice.detalles;
+    unitPriceField = 'precio_metro';
+  }
   const discount = parseFloat(invoice.descuento) || 0;
   const subtotalGeneral = items?.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0) || 0;
   const totalFinal = subtotalGeneral - discount;
@@ -104,7 +123,11 @@ const InvoiceTemplate = ({ invoice, type }) => {
           <img src={logoUrl} alt="Beauty Blouse Logo" className="logo" />
         </div>
         <div className="invoice-info">
-          <p className="invoice-title">{isSale ? 'FACTURA DE VENTA' : 'FACTURA DE COMPRA'}</p>
+          <p className="invoice-title">
+            {isSale ? 'FACTURA DE VENTA' : 
+             isPurchase ? 'FACTURA DE COMPRA' : 
+             'FACTURA DE COMPRA TELA'}
+          </p>
           <p className="invoice-number">No. {invoice.numero_factura}</p>
           <p className="mt-2"><strong>Fecha Emisión:</strong> {formatDate(invoice.fecha_emision)}</p>
           {invoice.fecha_vencimiento && (
@@ -116,7 +139,7 @@ const InvoiceTemplate = ({ invoice, type }) => {
       <div className="client-details mb-6 p-3 bg-gray-50 rounded-md border border-gray-200">
         <p className="section-title">{isSale ? 'Datos del Cliente:' : 'Datos del Proveedor:'}</p>
         <p className="font-bold">{entity?.[entityNameField]}</p>
-        <p>{entityIdField}: {entity?.[entityIdField]}</p>
+        <p>{entityIdField === 'cedula_id' ? 'Cédula' : 'Cédula Fiscal'}: {entity?.[entityIdField]}</p>
         <p>{entity?.direccion}</p>
         <p>{entity?.ciudad}</p>
       </div>
@@ -132,8 +155,8 @@ const InvoiceTemplate = ({ invoice, type }) => {
       <table className="w-full items-table mb-6">
         <thead>
           <tr>
-            <th className="w-1/12 text-center">Cant.</th>
-            <th className="w-5/12">Descripción (Referencia)</th>
+            <th className="w-1/12 text-center">{isFabricPurchase ? 'Metros' : 'Cant.'}</th>
+            <th className="w-5/12">Descripción {isFabricPurchase ? '(Color)' : '(Referencia)'}</th>
             <th className="w-2/12 text-right">Precio Unit.</th>
             <th className="w-2/12 text-right">Subtotal</th>
           </tr>
@@ -141,8 +164,15 @@ const InvoiceTemplate = ({ invoice, type }) => {
         <tbody>
           {items && items.map((item, index) => (
             <tr key={item.id || index}>
-              <td className="text-center">{item.cantidad}</td>
-              <td>{item.productos?.nombre} ({item.productos?.sku})</td>
+              <td className="text-center">
+                {isFabricPurchase ? item.metraje_cantidad : item.cantidad}
+              </td>
+              <td>
+                {isFabricPurchase ? 
+                  `${item.nombre_tela} (${item.color})` : 
+                  `${item.producto?.nombre} (${item.producto?.sku})`
+                }
+              </td>
               <td className="text-right">${formatCurrency(item[unitPriceField])}</td>
               <td className="text-right">${formatCurrency(item.subtotal)}</td>
             </tr>

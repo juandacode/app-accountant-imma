@@ -15,10 +15,13 @@ const PrintInvoices = () => {
   const { supabase, loading: supabaseLoading, error: supabaseError } = useSupabase();
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceTemplate, setShowInvoiceTemplate] = useState(false);
+  const [invoiceType, setInvoiceType] = useState('venta');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +33,7 @@ const PrintInvoices = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchInvoices(), fetchClients()]);
+      await Promise.all([fetchAllInvoices(), fetchClients(), fetchSuppliers()]);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -38,9 +41,10 @@ const PrintInvoices = () => {
     }
   };
 
-  const fetchInvoices = async () => {
+  const fetchAllInvoices = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch sales invoices
+      const { data: salesInvoices, error: salesError } = await supabase
         .from('facturas_venta')
         .select(`
           *,
@@ -52,8 +56,46 @@ const PrintInvoices = () => {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      setInvoices(data || []);
+      if (salesError) throw salesError;
+
+      // Fetch purchase invoices
+      const { data: purchaseInvoices, error: purchaseError } = await supabase
+        .from('facturas_compra')
+        .select(`
+          *,
+          proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_detalles(
+            *,
+            producto:productos(nombre, descripcion, sku)
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (purchaseError) throw purchaseError;
+
+      // Fetch fabric purchase invoices
+      const { data: fabricInvoices, error: fabricError } = await supabase
+        .from('facturas_compra_tela')
+        .select(`
+          *,
+          proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_tela_detalles(*)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (fabricError) throw fabricError;
+
+      // Combine all invoices with type identification
+      const allInvoices = [
+        ...((salesInvoices || []).map(inv => ({ ...inv, invoice_type: 'venta' }))),
+        ...((purchaseInvoices || []).map(inv => ({ ...inv, invoice_type: 'compra' }))),
+        ...((fabricInvoices || []).map(inv => ({ ...inv, invoice_type: 'compra_tela' })))
+      ];
+
+      // Sort by creation date
+      allInvoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      setInvoices(allInvoices);
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({ title: "Error", description: "No se pudieron cargar las facturas.", variant: "destructive" });
@@ -75,9 +117,38 @@ const PrintInvoices = () => {
     }
   };
 
-  const getClientName = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
-    return client ? client.nombre_completo : 'Cliente no encontrado';
+  const fetchSuppliers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('proveedores')
+        .select('*')
+        .order('nombre_proveedor');
+      
+      if (error) throw error;
+      setSuppliers(data || []);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+      toast({ title: "Error", description: "No se pudieron cargar los proveedores.", variant: "destructive" });
+    }
+  };
+
+  const getEntityName = (invoice) => {
+    if (invoice.invoice_type === 'venta') {
+      const client = clients.find(c => c.id === invoice.cliente_id);
+      return client ? client.nombre_completo : 'Cliente no encontrado';
+    } else {
+      const supplier = suppliers.find(s => s.id === invoice.proveedor_id);
+      return supplier ? supplier.nombre_proveedor : 'Proveedor no encontrado';
+    }
+  };
+
+  const getInvoiceTypeLabel = (type) => {
+    switch(type) {
+      case 'venta': return 'Venta';
+      case 'compra': return 'Compra';
+      case 'compra_tela': return 'Compra Tela';
+      default: return 'Desconocido';
+    }
   };
 
   const getStatusBadge = (estado) => {
@@ -98,14 +169,16 @@ const PrintInvoices = () => {
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
-      fetchInvoices();
+      fetchAllInvoices();
       return;
     }
 
     setLoading(true);
     try {
-      // CORREGIR: Búsqueda por facturas directamente
-      const { data: invoiceData, error: invoiceError } = await supabase
+      const searchResults = [];
+
+      // Search sales invoices
+      const { data: salesData, error: salesError } = await supabase
         .from('facturas_venta')
         .select(`
           *,
@@ -118,31 +191,49 @@ const PrintInvoices = () => {
         .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
-      if (invoiceError) throw invoiceError;
+      if (salesError) throw salesError;
+      if (salesData) {
+        searchResults.push(...salesData.map(inv => ({ ...inv, invoice_type: 'venta' })));
+      }
 
-      // CORREGIR: Búsqueda por nombre de cliente usando JOIN correcto
-      const { data: clientData, error: clientError } = await supabase
-        .from('facturas_venta')
+      // Search purchase invoices
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from('facturas_compra')
         .select(`
           *,
-          cliente:clientes!inner(nombre_completo, cedula_id, direccion, ciudad),
-          detalles:facturas_venta_detalles(
+          proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_detalles(
             *,
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .filter('cliente.nombre_completo', 'ilike', `%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
-      if (clientError) throw clientError;
+      if (purchaseError) throw purchaseError;
+      if (purchaseData) {
+        searchResults.push(...purchaseData.map(inv => ({ ...inv, invoice_type: 'compra' })));
+      }
 
-      // Combinar resultados y eliminar duplicados
-      const allResults = [...(invoiceData || []), ...(clientData || [])];
-      const uniqueResults = allResults.filter((invoice, index, self) => 
-        index === self.findIndex(i => i.id === invoice.id)
-      );
+      // Search fabric purchase invoices
+      const { data: fabricData, error: fabricError } = await supabase
+        .from('facturas_compra_tela')
+        .select(`
+          *,
+          proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_tela_detalles(*)
+        `)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
+        .order('created_at', { ascending: false });
 
-      setInvoices(uniqueResults);
+      if (fabricError) throw fabricError;
+      if (fabricData) {
+        searchResults.push(...fabricData.map(inv => ({ ...inv, invoice_type: 'compra_tela' })));
+      }
+
+      // Sort by creation date
+      searchResults.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setInvoices(searchResults);
     } catch (error) {
       console.error('Error searching invoices:', error);
       toast({ title: "Error", description: `Error al buscar facturas: ${error.message}`, variant: "destructive" });
@@ -158,21 +249,54 @@ const PrintInvoices = () => {
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    if (filterStatus === 'all') return true;
-    return invoice.estado === filterStatus;
+    let passesStatusFilter = true;
+    let passesTypeFilter = true;
+    
+    if (filterStatus !== 'all') {
+      passesStatusFilter = invoice.estado === filterStatus;
+    }
+    
+    if (filterType !== 'all') {
+      passesTypeFilter = invoice.invoice_type === filterType;
+    }
+    
+    return passesStatusFilter && passesTypeFilter;
   });
 
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
+    setInvoiceType(invoice.invoice_type);
     setShowInvoiceTemplate(true);
   };
 
   const handlePrintInvoice = (invoice) => {
     setSelectedInvoice(invoice);
+    setInvoiceType(invoice.invoice_type);
     setShowInvoiceTemplate(true);
     // Trigger print after template loads
     setTimeout(() => {
-      window.print();
+      const printContent = document.querySelector('.invoice-template-print');
+      if (printContent) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Factura ${invoice.numero_factura}</title>
+              <style>
+                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                @media print { body { margin: 0; padding: 0; } }
+              </style>
+            </head>
+            <body>
+              ${printContent.innerHTML}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }
     }, 500);
   };
 
@@ -184,7 +308,7 @@ const PrintInvoices = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Imprimir Facturas</h1>
-          <p className="text-gray-600 mt-1">Busca e imprime facturas de venta</p>
+          <p className="text-gray-600 mt-1">Busca e imprime facturas de venta, compra y compra de tela</p>
         </div>
       </div>
 
@@ -206,6 +330,17 @@ const PrintInvoices = () => {
                 />
               </div>
             </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="venta">Venta</SelectItem>
+                <SelectItem value="compra">Compra</SelectItem>
+                <SelectItem value="compra_tela">Compra Tela</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Estado" />
@@ -243,8 +378,9 @@ const PrintInvoices = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Factura</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Fecha</TableHead>
-                    <TableHead>Cliente</TableHead>
+                    <TableHead>Cliente/Proveedor</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Acciones</TableHead>
@@ -252,10 +388,19 @@ const PrintInvoices = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
+                    <TableRow key={`${invoice.invoice_type}-${invoice.id}`}>
                       <TableCell className="font-medium">{invoice.numero_factura}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={
+                          invoice.invoice_type === 'venta' ? 'bg-blue-50 text-blue-700' :
+                          invoice.invoice_type === 'compra' ? 'bg-orange-50 text-orange-700' :
+                          'bg-purple-50 text-purple-700'
+                        }>
+                          {getInvoiceTypeLabel(invoice.invoice_type)}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{formatDate(invoice.fecha_emision)}</TableCell>
-                      <TableCell>{getClientName(invoice.cliente_id)}</TableCell>
+                      <TableCell>{getEntityName(invoice)}</TableCell>
                       <TableCell className="font-semibold">{formatCurrency(invoice.monto_total)}</TableCell>
                       <TableCell>{getStatusBadge(invoice.estado)}</TableCell>
                       <TableCell>
@@ -289,13 +434,28 @@ const PrintInvoices = () => {
       </Card>
 
       {showInvoiceTemplate && selectedInvoice && (
-        <InvoiceTemplate
-          invoice={selectedInvoice}
-          onClose={() => {
-            setShowInvoiceTemplate(false);
-            setSelectedInvoice(null);
-          }}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-xl font-bold">Vista Previa - Factura {selectedInvoice.numero_factura}</h2>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowInvoiceTemplate(false);
+                  setSelectedInvoice(null);
+                }}
+              >
+                Cerrar
+              </Button>
+            </div>
+            <div className="invoice-template-print">
+              <InvoiceTemplate
+                invoice={selectedInvoice}
+                type={invoiceType}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
