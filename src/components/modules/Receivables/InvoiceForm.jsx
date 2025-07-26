@@ -18,8 +18,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
     fecha_emision: new Date().toLocaleDateString('en-CA'),
     fecha_vencimiento: '',
     forma_pago: '',
-    descripcion_factura: ''
-    // REMOVER: descuento eliminado según solicitud
+    descripcion_factura: '',
+    descuento: 0
   });
   
   const [form, setForm] = useState(getInitialFormState());
@@ -36,8 +36,8 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
             fecha_emision: editingInvoice.fecha_emision ? new Date(editingInvoice.fecha_emision + 'T00:00:00Z').toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA'),
             fecha_vencimiento: editingInvoice.fecha_vencimiento ? new Date(editingInvoice.fecha_vencimiento + 'T00:00:00Z').toLocaleDateString('en-CA') : '',
             forma_pago: editingInvoice.forma_pago || '',
-            descripcion_factura: editingInvoice.descripcion_factura || ''
-            // REMOVER: descuento eliminado según solicitud
+            descripcion_factura: editingInvoice.descripcion_factura || '',
+            descuento: editingInvoice.descuento || 0
           });
           const customer = customers.find(c => c.id === editingInvoice.cliente_id);
           setSelectedCustomerDetails(customer);
@@ -111,19 +111,20 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
       toast({ title: "Error de Validación", description: "La fecha de emisión es obligatoria.", variant: "destructive" });
       return;
     }
-    const montoTotal = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const subtotal = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const montoTotal = subtotal - (form.descuento || 0);
 
     const dataToSubmit = {
       ...form,
-      fecha_emision: form.fecha_emision || null, // CORREGIR: Enviar NULL si está vacío
-      fecha_vencimiento: form.fecha_vencimiento || null, // CORREGIR: Enviar NULL si está vacío
+      fecha_emision: form.fecha_emision || null,
+      fecha_vencimiento: form.fecha_vencimiento || null,
       monto_total: montoTotal
-      // REMOVER: descuento eliminado según solicitud
     };
     onSubmit(dataToSubmit, invoiceItems);
   };
 
-  const totalFactura = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotalFactura = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalFactura = subtotalFactura - (form.descuento || 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -243,7 +244,24 @@ const InvoiceForm = ({ isOpen, onOpenChange, onSubmit, editingInvoice, customers
                 )}
             </div>
 
-            {/* REMOVER: Sección de descuento eliminada según solicitud */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+              <div>
+                <Label htmlFor="subtotal">Subtotal</Label>
+                <Input id="subtotal" value={`$${Math.round(subtotalFactura)}`} readOnly className="font-semibold" />
+              </div>
+              <div>
+                <Label htmlFor="descuento">Descuento</Label>
+                <Input 
+                  id="descuento" 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  max={subtotalFactura}
+                  value={form.descuento} 
+                  onChange={(e) => setForm({...form, descuento: parseFloat(e.target.value) || 0})} 
+                />
+              </div>
+            </div>
 
             <button type="submit" style={{ display: 'none' }}>Submit</button>
             </form>

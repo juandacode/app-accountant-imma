@@ -331,7 +331,12 @@ const Receivables = () => {
         </div>
       </div>
 
-      <ReceivablesStats stats={stats} />
+      <ReceivablesStats 
+        clientsCount={customers.length}
+        totalReceived={invoices.reduce((sum, inv) => sum + (inv.monto_pagado || 0), 0)}
+        totalReceivable={invoices.filter(inv => inv.estado === 'Pendiente').reduce((sum, inv) => sum + (inv.monto_total - (inv.monto_pagado || 0)), 0)}
+        pendingInvoicesCount={invoices.filter(inv => inv.estado === 'Pendiente').length}
+      />
 
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         {[
