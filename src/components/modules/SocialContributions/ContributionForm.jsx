@@ -10,7 +10,8 @@ const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution,
   const initialFormState = {
     nombre_socio: '',
     monto_aporte: '',
-    fecha_aporte: new Date().toISOString().split('T')[0]
+    fecha_aporte: new Date().toISOString().split('T')[0],
+    tipo_ingreso: 'Efectivo'
   };
   const [form, setForm] = useState(initialFormState);
 
@@ -20,7 +21,8 @@ const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution,
             setForm({
                 nombre_socio: editingContribution.nombre_socio || '',
                 monto_aporte: editingContribution.monto_aporte || '',
-                fecha_aporte: editingContribution.fecha_aporte || new Date().toISOString().split('T')[0]
+                fecha_aporte: editingContribution.fecha_aporte || new Date().toISOString().split('T')[0],
+                tipo_ingreso: editingContribution.tipo_ingreso || 'Efectivo'
             });
         } else {
             setForm(initialFormState);
@@ -30,7 +32,7 @@ const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution,
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.nombre_socio || !form.monto_aporte || !form.fecha_aporte) {
+    if (!form.nombre_socio || !form.monto_aporte || !form.fecha_aporte || !form.tipo_ingreso) {
       return;
     }
     onSubmit({ ...form, monto_aporte: parseFloat(form.monto_aporte) });
@@ -79,6 +81,18 @@ const ContributionForm = ({ isOpen, onOpenChange, onSubmit, editingContribution,
                 onChange={(e) => setForm({ ...form, monto_aporte: e.target.value })}
                 required
                 />
+            </div>
+            <div>
+                <Label htmlFor="tipo_ingreso">Tipo de Ingreso</Label>
+                <Select value={form.tipo_ingreso} onValueChange={(value) => setForm({ ...form, tipo_ingreso: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Efectivo">Efectivo</SelectItem>
+                    <SelectItem value="Banco">Banco</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
             <div>
                 <Label htmlFor="fecha_aporte">Fecha del Aporte</Label>

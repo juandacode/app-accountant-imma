@@ -77,9 +77,11 @@ const SocialContributions = () => {
       result = data;
       toast({ title: "¡Aporte registrado!", description: "El nuevo aporte social se ha registrado correctamente." });
 
+      // Registrar en caja según el tipo de ingreso
+      const tipoTransaccion = result.tipo_ingreso === 'Efectivo' ? 'INGRESO_APORTE_SOCIAL_EFECTIVO' : 'INGRESO_APORTE_SOCIAL_BANCO';
       const { error: cashError } = await supabase.rpc('registrar_transaccion_caja', { 
-        p_tipo_transaccion: 'INGRESO_APORTE_SOCIAL', 
-        p_descripcion: `Aporte social de ${result.nombre_socio}`, 
+        p_tipo_transaccion: tipoTransaccion, 
+        p_descripcion: `Aporte social ${result.tipo_ingreso} de ${result.nombre_socio}`, 
         p_monto: result.monto_aporte,
         p_referencia_id: result.id,
         p_referencia_tabla: 'aportes_sociales'

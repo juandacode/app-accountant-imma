@@ -12,6 +12,7 @@ import InvoiceList from './InvoiceList';
 import CustomerForm from './CustomerForm';
 import CustomerList from './CustomerList';
 import PaymentForm from './PaymentForm';
+import ImprovedPaymentForm from './ImprovedPaymentForm';
 import RecentPayments from './RecentPayments';
 import ReceivablesStats from './ReceivablesStats';
 
@@ -26,6 +27,7 @@ const Receivables = () => {
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false);
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
+  const [isImprovedPaymentFormOpen, setIsImprovedPaymentFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('');
@@ -256,6 +258,51 @@ const Receivables = () => {
     }
   };
 
+  const handleImprovedPaymentSubmit = async (paymentsArray) => {
+    if (!supabase) return;
+
+    try {
+      // Insertar todos los pagos
+      for (const paymentData of paymentsArray) {
+        const { error } = await supabase.from('pagos_recibidos').insert(paymentData);
+        if (error) throw error;
+
+        // Actualizar cada factura
+        const invoice = invoices.find(inv => inv.id === paymentData.factura_venta_id);
+        if (invoice) {
+          const newPaidAmount = (invoice.monto_pagado || 0) + paymentData.monto_pago;
+          const newStatus = newPaidAmount >= invoice.monto_total ? 'Pagada' : 'Pendiente';
+          
+          const { error: updateError } = await supabase.from('facturas_venta').update({
+            monto_pagado: newPaidAmount,
+            estado: newStatus
+          }).eq('id', paymentData.factura_venta_id);
+          if (updateError) throw updateError;
+
+          // Registrar en caja para cada pago
+          const { error: cashError } = await supabase.rpc('registrar_transaccion_caja', {
+            p_tipo_transaccion: 'INGRESO_PAGO_FACTURA',
+            p_descripcion: `Pago distribuido factura ${invoice.numero_factura}`,
+            p_monto: paymentData.monto_pago,
+            p_referencia_id: paymentData.factura_venta_id,
+            p_referencia_tabla: 'facturas_venta'
+          });
+          if (cashError) throw cashError;
+        }
+      }
+
+      toast({ 
+        title: "Pagos registrados", 
+        description: `Se registraron ${paymentsArray.length} pago(s) correctamente.` 
+      });
+      setIsImprovedPaymentFormOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving payments:', error);
+      toast({ title: "Error", description: `Error al registrar los pagos: ${error.message}`, variant: "destructive" });
+    }
+  };
+
   const handleEditInvoice = (invoice) => {
     setEditingInvoice(invoice);
     setIsInvoiceFormOpen(true);
@@ -401,16 +448,27 @@ const Receivables = () => {
 
       {activeTab === 'payments' && (
         <div className="space-y-6">
-          <div className="flex justify-end">
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" onClick={() => setIsPaymentFormOpen(true)}>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsPaymentFormOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Registrar Pago
+              Pago Rápido
+            </Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" onClick={() => setIsImprovedPaymentFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Pago Distribuido
             </Button>
             <PaymentForm 
               isOpen={isPaymentFormOpen}
               onOpenChange={setIsPaymentFormOpen}
               onSubmit={handlePaymentSubmit}
               invoices={invoices.filter(inv => inv.estado === 'Pendiente')}
+            />
+            <ImprovedPaymentForm 
+              isOpen={isImprovedPaymentFormOpen}
+              onOpenChange={setIsImprovedPaymentFormOpen}
+              onSubmit={handleImprovedPaymentSubmit}
+              invoices={invoices.filter(inv => inv.estado === 'Pendiente')}
+              customers={customers}
             />
           </div>
           <RecentPayments payments={payments} />

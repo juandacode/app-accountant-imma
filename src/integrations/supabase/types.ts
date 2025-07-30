@@ -21,6 +21,7 @@ export type Database = {
           id: number
           monto_aporte: number
           nombre_socio: string
+          tipo_ingreso: string | null
         }
         Insert: {
           created_at?: string | null
@@ -28,6 +29,7 @@ export type Database = {
           id?: never
           monto_aporte: number
           nombre_socio: string
+          tipo_ingreso?: string | null
         }
         Update: {
           created_at?: string | null
@@ -35,6 +37,7 @@ export type Database = {
           id?: never
           monto_aporte?: number
           nombre_socio?: string
+          tipo_ingreso?: string | null
         }
         Relationships: []
       }
