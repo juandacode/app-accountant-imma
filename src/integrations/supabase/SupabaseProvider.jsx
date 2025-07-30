@@ -34,6 +34,11 @@ export const SupabaseProvider = ({ children }) => {
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true
+          },
+          realtime: {
+            params: {
+              eventsPerSecond: 2
+            }
           }
         });
         
