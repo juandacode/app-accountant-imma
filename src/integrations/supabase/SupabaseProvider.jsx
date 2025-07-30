@@ -36,9 +36,7 @@ export const SupabaseProvider = ({ children }) => {
             detectSessionInUrl: true
           },
           realtime: {
-            params: {
-              eventsPerSecond: 2
-            }
+            enabled: false
           }
         });
         
