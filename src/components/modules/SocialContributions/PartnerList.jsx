@@ -33,41 +33,14 @@ const PartnerList = ({ partners, contributions, onEdit, onDelete }) => {
               <div className="flex justify-between items-start mb-3">
                 <h3 className="font-bold text-lg text-purple-700">{partner.nombre_socio}</h3>
                 <div className="flex space-x-1">
-                  <Button size="sm" variant="outline" onClick={() => onEdit(partner)}>
+                  <Button size="sm" variant="outline" onClick={() => onEdit(partner)} disabled>
                     <Edit className="h-3 w-3" />
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => onDelete(partner.id)}>
+                  <Button size="sm" variant="destructive" onClick={() => onDelete(partner.nombre_socio)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
-              
-              {partner.cedula_socio && (
-                <p className="text-sm text-gray-600 mb-2">
-                  <strong>Cédula:</strong> {partner.cedula_socio}
-                </p>
-              )}
-              
-              {partner.telefono && (
-                <p className="text-sm text-gray-600 mb-2 flex items-center">
-                  <Phone className="h-3 w-3 mr-1" />
-                  {partner.telefono}
-                </p>
-              )}
-              
-              {partner.email && (
-                <p className="text-sm text-gray-600 mb-2 flex items-center">
-                  <Mail className="h-3 w-3 mr-1" />
-                  {partner.email}
-                </p>
-              )}
-              
-              {partner.direccion && (
-                <p className="text-sm text-gray-600 mb-2 flex items-center">
-                  <MapPin className="h-3 w-3 mr-1" />
-                  {partner.direccion}
-                </p>
-              )}
               
               {partner.fecha_ingreso && (
                 <p className="text-sm text-gray-600 mb-2">
@@ -75,21 +48,15 @@ const PartnerList = ({ partners, contributions, onEdit, onDelete }) => {
                 </p>
               )}
               
-              {partner.porcentaje_participacion && (
-                <p className="text-sm text-gray-600 mb-2">
-                  <strong>Participación:</strong> {partner.porcentaje_participacion}%
-                </p>
-              )}
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Cantidad de Aportes:</strong> {partner.cantidad_aportes}
+              </p>
               
               <div className="mt-3 pt-3 border-t">
                 <p className="text-sm font-semibold text-green-600">
-                  Total Aportado: ${formatDisplayValue(getPartnerContributions(partner.nombre_socio))}
+                  Total Aportado: ${formatDisplayValue(partner.total_aportado || 0)}
                 </p>
               </div>
-              
-              {partner.notas && (
-                <p className="text-xs text-gray-500 mt-2 italic">{partner.notas}</p>
-              )}
             </motion.div>
           ))}
         </div>

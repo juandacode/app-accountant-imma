@@ -9,13 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
   const initialFormState = {
     nombre_socio: '',
-    cedula_socio: '',
-    telefono: '',
-    email: '',
-    direccion: '',
-    fecha_ingreso: new Date().toISOString().split('T')[0],
-    porcentaje_participacion: '',
-    notas: ''
+    fecha_ingreso: new Date().toISOString().split('T')[0]
   };
   const [form, setForm] = useState(initialFormState);
 
@@ -24,13 +18,7 @@ const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
         if (editingPartner) {
             setForm({
                 nombre_socio: editingPartner.nombre_socio || '',
-                cedula_socio: editingPartner.cedula_socio || '',
-                telefono: editingPartner.telefono || '',
-                email: editingPartner.email || '',
-                direccion: editingPartner.direccion || '',
-                fecha_ingreso: editingPartner.fecha_ingreso || new Date().toISOString().split('T')[0],
-                porcentaje_participacion: editingPartner.porcentaje_participacion || '',
-                notas: editingPartner.notas || ''
+                fecha_ingreso: editingPartner.fecha_ingreso || new Date().toISOString().split('T')[0]
             });
         } else {
             setForm(initialFormState);
@@ -43,10 +31,7 @@ const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
     if (!form.nombre_socio) {
       return;
     }
-    onSubmit({ 
-      ...form, 
-      porcentaje_participacion: form.porcentaje_participacion ? parseFloat(form.porcentaje_participacion) : null 
-    });
+    onSubmit(form);
   };
 
   return (
@@ -56,7 +41,6 @@ const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
             <DialogTitle>{editingPartner ? 'Editar Socio' : 'Nuevo Socio'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="nombre_socio">Nombre del Socio *</Label>
                     <Input
@@ -64,45 +48,9 @@ const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
                         value={form.nombre_socio}
                         onChange={(e) => setForm({ ...form, nombre_socio: e.target.value })}
                         required
+                        placeholder="Ingrese el nombre completo del socio"
                     />
                 </div>
-                <div>
-                    <Label htmlFor="cedula_socio">Cédula/ID</Label>
-                    <Input
-                        id="cedula_socio"
-                        value={form.cedula_socio}
-                        onChange={(e) => setForm({ ...form, cedula_socio: e.target.value })}
-                    />
-                </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="telefono">Teléfono</Label>
-                    <Input
-                        id="telefono"
-                        value={form.telefono}
-                        onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                        id="email"
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
-                </div>
-            </div>
-            <div>
-                <Label htmlFor="direccion">Dirección</Label>
-                <Input
-                    id="direccion"
-                    value={form.direccion}
-                    onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="fecha_ingreso">Fecha de Ingreso</Label>
                     <Input
@@ -113,28 +61,12 @@ const PartnerForm = ({ isOpen, onOpenChange, onSubmit, editingPartner }) => {
                         required
                     />
                 </div>
-                <div>
-                    <Label htmlFor="porcentaje_participacion">% Participación</Label>
-                    <Input
-                        id="porcentaje_participacion"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={form.porcentaje_participacion}
-                        onChange={(e) => setForm({ ...form, porcentaje_participacion: e.target.value })}
-                    />
+                <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                        <strong>Nota:</strong> El reparto de ganancias se realizará de forma equitativa entre todos los socios al final del año fiscal, 
+                        basado en el capital total aportado por cada socio.
+                    </p>
                 </div>
-            </div>
-            <div>
-                <Label htmlFor="notas">Notas</Label>
-                <Textarea
-                    id="notas"
-                    value={form.notas}
-                    onChange={(e) => setForm({ ...form, notas: e.target.value })}
-                    placeholder="Información adicional sobre el socio..."
-                />
-            </div>
             <DialogFooter>
                 <Button type="submit" className="w-full">
                 {editingPartner ? 'Actualizar Socio' : 'Registrar Socio'}

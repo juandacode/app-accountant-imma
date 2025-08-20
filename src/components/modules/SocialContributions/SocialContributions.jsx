@@ -26,25 +26,35 @@ const SocialContributions = () => {
   const fetchData = async () => {
     if (!supabase) return;
     try {
-      const [contributionsResult, partnersResult] = await Promise.all([
-        supabase.from('aportes_sociales').select('*').order('fecha_aporte', { ascending: false }),
-        supabase.from('socios').select('*').order('nombre_socio')
-      ]);
+      const { data: contributionsData, error: contributionsError } = await supabase
+        .from('aportes_sociales')
+        .select('*')
+        .order('fecha_aporte', { ascending: false });
       
-      if (contributionsResult.error) {
+      if (contributionsError) {
         toast({ title: "Error", description: "No se pudieron cargar los aportes sociales.", variant: "destructive" });
-      } else {
-        setContributions(contributionsResult.data || []);
+        return;
       }
 
-      if (partnersResult.error) {
-        console.log('Tabla socios no existe, creando datos desde aportes...');
-        // Si no existe la tabla socios, crear lista única desde aportes
-        const uniquePartners = [...new Set(contributionsResult.data?.map(c => c.nombre_socio) || [])];
-        setPartners(uniquePartners.map((name, index) => ({ id: index + 1, nombre_socio: name })));
-      } else {
-        setPartners(partnersResult.data || []);
-      }
+      setContributions(contributionsData || []);
+
+      // Crear lista única de socios desde aportes_sociales
+      const uniquePartnerNames = [...new Set(contributionsData?.map(c => c.nombre_socio) || [])];
+      const partnersWithStats = uniquePartnerNames.map((name, index) => {
+        const partnerContributions = contributionsData.filter(c => c.nombre_socio === name);
+        const totalContributed = partnerContributions.reduce((sum, c) => sum + Number(c.monto_aporte), 0);
+        const firstContribution = partnerContributions.sort((a, b) => new Date(a.fecha_aporte) - new Date(b.fecha_aporte))[0];
+        
+        return {
+          id: index + 1,
+          nombre_socio: name,
+          fecha_ingreso: firstContribution?.fecha_aporte,
+          total_aportado: totalContributed,
+          cantidad_aportes: partnerContributions.length
+        };
+      });
+      
+      setPartners(partnersWithStats);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: "Error", description: "Error al cargar los datos.", variant: "destructive" });
@@ -98,21 +108,24 @@ const SocialContributions = () => {
     if (!supabase) return;
     
     try {
-      if (editingPartner) {
-        const { error } = await supabase.from('socios').update(partnerData).eq('id', editingPartner.id);
-        if (error) throw error;
-        toast({ title: "¡Socio actualizado!", description: "El socio se ha actualizado correctamente." });
-      } else {
-        const { error } = await supabase.from('socios').insert(partnerData);
-        if (error) throw error;
-        toast({ title: "¡Socio registrado!", description: "El nuevo socio se ha registrado correctamente." });
-      }
+      // Crear un aporte inicial con monto 0 para registrar al socio
+      const newContribution = {
+        nombre_socio: partnerData.nombre_socio,
+        monto_aporte: 0,
+        fecha_aporte: partnerData.fecha_ingreso || new Date().toISOString().split('T')[0],
+        tipo_ingreso: 'Efectivo'
+      };
+
+      const { error } = await supabase.from('aportes_sociales').insert(newContribution);
+      if (error) throw error;
+      
+      toast({ title: "¡Socio registrado!", description: "El nuevo socio se ha registrado correctamente." });
       
       setEditingPartner(null);
       setIsPartnerFormOpen(false);
       fetchData();
     } catch (error) {
-      toast({ title: "Error", description: `Error al guardar el socio: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: `Error al registrar el socio: ${error.message}`, variant: "destructive" });
     }
   };
 
@@ -150,10 +163,10 @@ const SocialContributions = () => {
     }
   };
 
-  const handleDeletePartner = async (id) => {
+  const handleDeletePartner = async (partnerName) => {
     const confirmed = await confirm({
         title: 'Confirmar Eliminación',
-        description: '¿Estás seguro de que quieres eliminar este socio? Esta acción no se puede deshacer.',
+        description: '¿Estás seguro de que quieres eliminar todos los aportes de este socio? Esta acción eliminará todos sus registros y movimientos de caja.',
         confirmText: 'Eliminar Socio'
     });
     if (!confirmed) return;
@@ -161,9 +174,30 @@ const SocialContributions = () => {
     if (!supabase) return;
 
     try {
-      const { error } = await supabase.from('socios').delete().eq('id', id);
+      // Obtener todos los aportes del socio para eliminar movimientos de caja
+      const { data: contributions } = await supabase
+        .from('aportes_sociales')
+        .select('id')
+        .eq('nombre_socio', partnerName);
+
+      // Eliminar movimientos de caja asociados
+      for (const contribution of contributions || []) {
+        await supabase
+          .from('caja_general_transacciones')
+          .delete()
+          .eq('referencia_id', contribution.id)
+          .eq('referencia_tabla', 'aportes_sociales');
+      }
+
+      // Eliminar todos los aportes del socio
+      const { error } = await supabase
+        .from('aportes_sociales')
+        .delete()
+        .eq('nombre_socio', partnerName);
+      
       if (error) throw error;
-      toast({ title: "Socio eliminado", description: "El socio se ha eliminado correctamente." });
+      
+      toast({ title: "Socio eliminado", description: "El socio y todos sus aportes se han eliminado correctamente." });
       fetchData();
     } catch (error) {
       toast({ title: "Error", description: `Error al eliminar el socio: ${error.message}`, variant: "destructive" });
