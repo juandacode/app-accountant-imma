@@ -4,6 +4,8 @@ import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, PackagePlus, Scissors } from 'lucide-react';
 
 // Componentes existentes
@@ -34,6 +36,9 @@ const FabricCutting = () => {
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState(null);
+  const [invoiceDetails, setInvoiceDetails] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -263,6 +268,44 @@ const FabricCutting = () => {
     }
   };
 
+  const handleViewInvoiceDetails = async (invoice) => {
+    try {
+      setSelectedInvoiceForView(invoice);
+      const { data, error } = await supabase
+        .from('facturas_compra_tela_detalles')
+        .select('*')
+        .eq('factura_compra_tela_id', invoice.id)
+        .order('id', { ascending: true });
+      if (error) throw error;
+      setInvoiceDetails(data || []);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error('Error fetching invoice details:', error);
+      toast({ title: 'Error', description: 'No se pudieron cargar los detalles de la factura.', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    try {
+      const confirmed = window.confirm('¿Eliminar esta factura y sus registros asociados (pagos y caja)?');
+      if (!confirmed) return;
+
+      // Eliminar pagos asociados primero (si existen)
+      await supabase.from('pagos_facturas_compra_tela').delete().eq('factura_compra_tela_id', invoiceId);
+      // Eliminar detalles
+      await supabase.from('facturas_compra_tela_detalles').delete().eq('factura_compra_tela_id', invoiceId);
+      // Eliminar factura (triggers limpiarán caja)
+      const { error } = await supabase.from('facturas_compra_tela').delete().eq('id', invoiceId);
+      if (error) throw error;
+
+      toast({ title: 'Factura eliminada', description: 'Se eliminaron registros asociados y el historial de caja.', });
+      fetchFabricInvoices();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast({ title: 'Error', description: `No se pudo eliminar la factura: ${error.message}`, variant: 'destructive' });
+    }
+  };
+
   const handleSubmitFabricEntry = async (fabricData) => {
     try {
       if (editingFabricEntry) {
@@ -419,9 +462,8 @@ const FabricCutting = () => {
               setEditingInvoice(invoice);
               setIsInvoiceFormOpen(true);
             }}
-            onViewDetails={(invoice) => {
-              console.log('View details:', invoice);
-            }}
+            onViewDetails={handleViewInvoiceDetails}
+            onDelete={(invoice) => handleDeleteInvoice(invoice.id)}
             onPayInvoice={(invoice) => {
               setSelectedInvoiceForPayment(invoice);
               setIsPaymentFormOpen(true);
@@ -507,6 +549,44 @@ const FabricCutting = () => {
         onSubmit={handleSubmitCut}
         fabricInventory={fabricInventory}
       />
+
+      {/* Detalles de Factura de Compra de Tela */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Factura {selectedInvoiceForView?.numero_factura}</DialogTitle>
+            <p className="text-sm text-gray-600">Proveedor: {suppliers.find(s => s.id === selectedInvoiceForView?.proveedor_id)?.nombre_proveedor || 'Sin proveedor'}</p>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rollo</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Color</TableHead>
+                  <TableHead className="text-right">Metraje</TableHead>
+                  <TableHead className="text-right">Ancho</TableHead>
+                  <TableHead className="text-right">Precio x m</TableHead>
+                  <TableHead className="text-right">Subtotal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoiceDetails.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-mono text-xs">{d.codigo_rollo}</TableCell>
+                    <TableCell>{d.nombre_tela}</TableCell>
+                    <TableCell>{d.color}</TableCell>
+                    <TableCell className="text-right">{Number(d.metraje_cantidad).toFixed(2)} m</TableCell>
+                    <TableCell className="text-right">{d.ancho_tela ? Number(d.ancho_tela).toFixed(2) + ' m' : '-'}</TableCell>
+                    <TableCell className="text-right">${'{'}Math.round(d.precio_metro || 0).toLocaleString('es'){'}'}</TableCell>
+                    <TableCell className="text-right">${'{'}Math.round(d.subtotal || 0).toLocaleString('es'){'}'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

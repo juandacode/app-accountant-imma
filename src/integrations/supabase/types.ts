@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -715,7 +715,7 @@ export type Database = {
     }
     Functions: {
       get_account_statement: {
-        Args: { p_entity_type: string; p_entity_id: number }
+        Args: { p_entity_id: number; p_entity_type: string }
         Returns: Json
       }
       get_financial_summary: {
@@ -723,7 +723,7 @@ export type Database = {
         Returns: Json
       }
       get_monthly_income_statement: {
-        Args: { p_year: number; p_month: number }
+        Args: { p_month: number; p_year: number }
         Returns: Json
       }
       get_next_fabric_purchase_invoice_number: {
@@ -742,17 +742,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      limpiar_datos_huerfanos: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       obtener_saldo_caja_actual: {
         Args: Record<PropertyKey, never>
         Returns: number
       }
       registrar_transaccion_caja: {
         Args: {
-          p_tipo_transaccion: string
           p_descripcion: string
           p_monto: number
           p_referencia_id?: number
           p_referencia_tabla?: string
+          p_tipo_transaccion: string
         }
         Returns: undefined
       }

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Eye, Search, CreditCard } from 'lucide-react';
+import { Edit, Eye, Search, CreditCard, Trash2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 const FabricPurchaseInvoiceList = ({ 
@@ -13,6 +13,7 @@ const FabricPurchaseInvoiceList = ({
   onEdit, 
   onViewDetails, 
   onPayInvoice, 
+  onDelete,
   loading, 
   suppliers 
 }) => {
@@ -165,6 +166,14 @@ const FabricPurchaseInvoiceList = ({
                             <CreditCard className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDelete?.(invoice)}
+                          title="Eliminar factura"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
