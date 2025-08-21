@@ -177,7 +177,7 @@ const PrintInvoices = () => {
     try {
       const searchResults = [];
 
-      // Search sales invoices by invoice number, description, or client name
+      // Search sales invoices - hacer múltiples consultas en lugar de .or() con campos relacionados
       const { data: salesData, error: salesError } = await supabase
         .from('facturas_venta')
         .select(`
@@ -188,15 +188,42 @@ const PrintInvoices = () => {
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,cliente.nombre_completo.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (salesError) throw salesError;
-      if (salesData) {
-        searchResults.push(...salesData.map(inv => ({ ...inv, invoice_type: 'venta' })));
+
+      // Buscar también por nombre de cliente usando filter del cliente
+      const { data: clientSalesData, error: clientSalesError } = await supabase
+        .from('facturas_venta')
+        .select(`
+          *,
+          cliente:clientes!inner(nombre_completo, cedula_id, direccion, ciudad),
+          detalles:facturas_venta_detalles(
+            *,
+            producto:productos(nombre, descripcion, sku)
+          )
+        `)
+        .ilike('cliente.nombre_completo', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (clientSalesError) throw clientSalesError;
+
+      // Combinar resultados de ventas evitando duplicados
+      const allSalesData = [...(salesData || [])];
+      if (clientSalesData) {
+        clientSalesData.forEach(invoice => {
+          if (!allSalesData.find(existing => existing.id === invoice.id)) {
+            allSalesData.push(invoice);
+          }
+        });
+      }
+      
+      if (allSalesData.length > 0) {
+        searchResults.push(...allSalesData.map(inv => ({ ...inv, invoice_type: 'venta' })));
       }
 
-      // Search purchase invoices by invoice number, description, or supplier name
+      // Search purchase invoices
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('facturas_compra')
         .select(`
@@ -207,15 +234,42 @@ const PrintInvoices = () => {
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,proveedor.nombre_proveedor.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (purchaseError) throw purchaseError;
-      if (purchaseData) {
-        searchResults.push(...purchaseData.map(inv => ({ ...inv, invoice_type: 'compra' })));
+
+      // Buscar también por nombre de proveedor
+      const { data: supplierPurchaseData, error: supplierPurchaseError } = await supabase
+        .from('facturas_compra')
+        .select(`
+          *,
+          proveedor:proveedores!inner(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_detalles(
+            *,
+            producto:productos(nombre, descripcion, sku)
+          )
+        `)
+        .ilike('proveedor.nombre_proveedor', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (supplierPurchaseError) throw supplierPurchaseError;
+
+      // Combinar resultados de compras evitando duplicados
+      const allPurchaseData = [...(purchaseData || [])];
+      if (supplierPurchaseData) {
+        supplierPurchaseData.forEach(invoice => {
+          if (!allPurchaseData.find(existing => existing.id === invoice.id)) {
+            allPurchaseData.push(invoice);
+          }
+        });
       }
 
-      // Search fabric purchase invoices by invoice number, description, or supplier name
+      if (allPurchaseData.length > 0) {
+        searchResults.push(...allPurchaseData.map(inv => ({ ...inv, invoice_type: 'compra' })));
+      }
+
+      // Search fabric purchase invoices
       const { data: fabricData, error: fabricError } = await supabase
         .from('facturas_compra_tela')
         .select(`
@@ -223,12 +277,36 @@ const PrintInvoices = () => {
           proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
           detalles:facturas_compra_tela_detalles(*)
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,proveedor.nombre_proveedor.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (fabricError) throw fabricError;
-      if (fabricData) {
-        searchResults.push(...fabricData.map(inv => ({ ...inv, invoice_type: 'compra_tela' })));
+
+      // Buscar también por nombre de proveedor en facturas de tela
+      const { data: supplierFabricData, error: supplierFabricError } = await supabase
+        .from('facturas_compra_tela')
+        .select(`
+          *,
+          proveedor:proveedores!inner(nombre_proveedor, cedula_fiscal, direccion, ciudad),
+          detalles:facturas_compra_tela_detalles(*)
+        `)
+        .ilike('proveedor.nombre_proveedor', `%${searchTerm}%`)
+        .order('created_at', { ascending: false });
+
+      if (supplierFabricError) throw supplierFabricError;
+
+      // Combinar resultados de facturas de tela evitando duplicados
+      const allFabricData = [...(fabricData || [])];
+      if (supplierFabricData) {
+        supplierFabricData.forEach(invoice => {
+          if (!allFabricData.find(existing => existing.id === invoice.id)) {
+            allFabricData.push(invoice);
+          }
+        });
+      }
+
+      if (allFabricData.length > 0) {
+        searchResults.push(...allFabricData.map(inv => ({ ...inv, invoice_type: 'compra_tela' })));
       }
 
       // Sort by creation date

@@ -83,7 +83,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
         ancho_tela: form.ancho_tela ? parseFloat(form.ancho_tela) : null,
         precio_metro: parseFloat(form.precio_metro),
         total_tela: parseFloat(form.total_tela),
-        proveedor_id: form.proveedor_id ? parseInt(form.proveedor_id) : null,
+        proveedor_id: (form.proveedor_id && form.proveedor_id !== 'none') ? parseInt(form.proveedor_id) : null,
     };
     onSubmit(dataToSubmit);
   };
@@ -160,7 +160,7 @@ const FabricEntryForm = ({ isOpen, onOpenChange, onSubmit, editingFabricEntry, s
             <Select name="proveedor_id" value={form.proveedor_id} onValueChange={(value) => handleSelectChange('proveedor_id', value)}>
               <SelectTrigger id="fabric_entry_proveedor_id"><SelectValue placeholder="Seleccionar proveedor..." /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Ninguno</SelectItem>
+                <SelectItem value="none">Ninguno</SelectItem>
                 {suppliers && suppliers.map(supplier => (
                   <SelectItem key={supplier.id} value={String(supplier.id)}>{supplier.nombre_proveedor}</SelectItem>
                 ))}
