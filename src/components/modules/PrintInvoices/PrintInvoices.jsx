@@ -177,7 +177,7 @@ const PrintInvoices = () => {
     try {
       const searchResults = [];
 
-      // Search sales invoices
+      // Search sales invoices by invoice number, description, or client name
       const { data: salesData, error: salesError } = await supabase
         .from('facturas_venta')
         .select(`
@@ -188,7 +188,7 @@ const PrintInvoices = () => {
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,cliente.nombre_completo.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (salesError) throw salesError;
@@ -196,7 +196,7 @@ const PrintInvoices = () => {
         searchResults.push(...salesData.map(inv => ({ ...inv, invoice_type: 'venta' })));
       }
 
-      // Search purchase invoices
+      // Search purchase invoices by invoice number, description, or supplier name
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('facturas_compra')
         .select(`
@@ -207,7 +207,7 @@ const PrintInvoices = () => {
             producto:productos(nombre, descripcion, sku)
           )
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,proveedor.nombre_proveedor.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (purchaseError) throw purchaseError;
@@ -215,7 +215,7 @@ const PrintInvoices = () => {
         searchResults.push(...purchaseData.map(inv => ({ ...inv, invoice_type: 'compra' })));
       }
 
-      // Search fabric purchase invoices
+      // Search fabric purchase invoices by invoice number, description, or supplier name
       const { data: fabricData, error: fabricError } = await supabase
         .from('facturas_compra_tela')
         .select(`
@@ -223,7 +223,7 @@ const PrintInvoices = () => {
           proveedor:proveedores(nombre_proveedor, cedula_fiscal, direccion, ciudad),
           detalles:facturas_compra_tela_detalles(*)
         `)
-        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%`)
+        .or(`numero_factura.ilike.%${searchTerm}%,descripcion_factura.ilike.%${searchTerm}%,proveedor.nombre_proveedor.ilike.%${searchTerm}%`)
         .order('created_at', { ascending: false });
 
       if (fabricError) throw fabricError;
