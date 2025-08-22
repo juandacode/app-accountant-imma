@@ -287,8 +287,29 @@ const FabricCutting = () => {
 
   const handleDeleteInvoice = async (invoiceId) => {
     try {
-      const confirmed = window.confirm('¿Eliminar esta factura y sus registros asociados (pagos y caja)?');
+      const confirmed = window.confirm('¿Eliminar esta factura y sus registros asociados (pagos, caja e inventario)?');
       if (!confirmed) return;
+
+      // Buscar rollos vinculados a la factura para limpiar inventario y cortes
+      const { data: detalles } = await supabase
+        .from('facturas_compra_tela_detalles')
+        .select('codigo_rollo')
+        .eq('factura_compra_tela_id', invoiceId);
+
+      if (detalles && detalles.length) {
+        const rollos = detalles.map(d => d.codigo_rollo);
+        const { data: inventario } = await supabase
+          .from('telas_inventario')
+          .select('id')
+          .in('codigo_rollo', rollos);
+        const invIds = (inventario || []).map(i => i.id);
+        if (invIds.length) {
+          // Eliminar cortes asociados a esas entradas de inventario
+          await supabase.from('telas_cortes').delete().in('tela_inventario_id', invIds);
+          // Eliminar entradas de inventario
+          await supabase.from('telas_inventario').delete().in('id', invIds);
+        }
+      }
 
       // Eliminar pagos asociados primero (si existen)
       await supabase.from('pagos_facturas_compra_tela').delete().eq('factura_compra_tela_id', invoiceId);
@@ -298,8 +319,10 @@ const FabricCutting = () => {
       const { error } = await supabase.from('facturas_compra_tela').delete().eq('id', invoiceId);
       if (error) throw error;
 
-      toast({ title: 'Factura eliminada', description: 'Se eliminaron registros asociados y el historial de caja.', });
+      toast({ title: 'Factura eliminada', description: 'Se eliminaron registros asociados, inventario y caja.', });
       fetchFabricInvoices();
+      fetchFabricInventory();
+      fetchFabricCuts();
     } catch (error) {
       console.error('Error deleting invoice:', error);
       toast({ title: 'Error', description: `No se pudo eliminar la factura: ${error.message}`, variant: 'destructive' });
@@ -334,6 +357,27 @@ const FabricCutting = () => {
   const handleEditFabricEntry = (fabricEntry) => {
     setEditingFabricEntry(fabricEntry);
     setIsEntryFormOpen(true);
+  };
+
+  const handleDeleteFabricInventory = async (fabricId) => {
+    try {
+      const confirmed = window.confirm('¿Eliminar esta entrada de inventario? También se eliminarán cortes asociados.');
+      if (!confirmed) return;
+
+      // Eliminar cortes asociados primero
+      await supabase.from('telas_cortes').delete().eq('tela_inventario_id', fabricId);
+
+      // Eliminar la entrada de inventario
+      const { error } = await supabase.from('telas_inventario').delete().eq('id', fabricId);
+      if (error) throw error;
+
+      toast({ title: 'Entrada eliminada', description: 'Se eliminó la entrada de inventario y sus cortes asociados.' });
+      fetchFabricInventory();
+      fetchFabricCuts();
+    } catch (error) {
+      console.error('Error deleting fabric inventory entry:', error);
+      toast({ title: 'Error', description: `No se pudo eliminar: ${error.message}`, variant: 'destructive' });
+    }
   };
 
   const handleSubmitCut = async (cutData) => {
@@ -476,6 +520,7 @@ const FabricCutting = () => {
           <FabricInventoryList
             fabricInventory={fabricInventory}
             onEdit={handleEditFabricEntry}
+            onDelete={handleDeleteFabricInventory}
             loading={loading}
           />
         </TabsContent>
@@ -504,6 +549,7 @@ const FabricCutting = () => {
           <FabricInventoryList
             fabricInventory={fabricInventory}
             onEdit={handleEditFabricEntry}
+            onDelete={handleDeleteFabricInventory}
             loading={loading}
           />
         </TabsContent>
