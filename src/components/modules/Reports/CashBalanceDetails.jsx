@@ -3,7 +3,9 @@ import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Trash2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const CashBalanceDetails = ({ isOpen, onOpenChange, title, transactionType }) => {
   const { supabase } = useSupabase();
@@ -47,6 +49,36 @@ const CashBalanceDetails = ({ isOpen, onOpenChange, title, transactionType }) =>
     }
   };
 
+  const handleCleanupCash = async () => {
+    try {
+      const confirmed = window.confirm('¿Limpiar datos huérfanos de caja? Esto eliminará transacciones sin facturas válidas.');
+      if (!confirmed) return;
+
+      setLoading(true);
+      
+      // Ejecutar función de limpieza
+      const { error } = await supabase.rpc('limpiar_datos_huerfanos');
+      if (error) throw error;
+
+      toast({ 
+        title: 'Limpieza completada', 
+        description: 'Se eliminaron transacciones huérfanas de caja.' 
+      });
+      
+      // Refrescar transacciones
+      await fetchTransactions();
+    } catch (error) {
+      console.error('Error cleaning cash:', error);
+      toast({ 
+        title: 'Error', 
+        description: `No se pudo limpiar: ${error.message}`, 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (value) => {
     return `$${Math.round(value || 0).toLocaleString('es')}`;
   };
@@ -72,8 +104,18 @@ const CashBalanceDetails = ({ isOpen, onOpenChange, title, transactionType }) =>
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>{title} - Últimos 50 Movimientos</DialogTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleCleanupCash}
+            disabled={loading}
+            className="ml-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Limpiar Caja
+          </Button>
         </DialogHeader>
         
         <div className="flex-grow overflow-y-auto">
